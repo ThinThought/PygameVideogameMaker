@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trimuiSandbox"
+version = "0.1.0"
+description = "Minimal Pygame scaffold (window + loop)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "opencv-python>=4.12.0.88",
+  "pygame-ce>=2.5",
+  "rich>=13",
+]
+
+[project.scripts]
+trimuiSandbox = "game.main:main"
+
+[tool.setuptools]
+packages = ["game", "game.core", "game.scenes"]
