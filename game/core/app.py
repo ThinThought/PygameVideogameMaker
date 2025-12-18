@@ -11,8 +11,8 @@ from game.core.clock import GameClock
 from game.core.resources import Resources
 from game.scenes.base import Scene
 from game.scenes.blank import BlankScene
-from game.scenes.input_test import InputTestScene
-from game.scenes.assets_test import AssetsTestScene
+from game.scenes.input_demo import InputTestScene
+from game.scenes.assets_demo import AssetsTestScene
 from game.core.config import WindowConfig
 from game.core.audio import AudioManager
 
@@ -38,9 +38,12 @@ class App:
 
 
         self.running = True
-        # self.scene: Scene = BlankScene()
-        self.scene: Scene = InputTestScene()
-        # self.scene: Scene = AssetsTestScene()
+        self.scenes = [
+            BlankScene(),
+            InputTestScene(),
+            AssetsTestScene()
+        ]
+        self.scene: Scene = self.scenes[1]
 
         console.print(Panel.fit("✅ Pygame initialized", border_style="green"))
 

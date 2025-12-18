@@ -176,13 +176,9 @@ Tras modificar este archivo, debes regenerar el vendor bundle antes de copiar el
 
 ## Despliegue en consola
 
-Una vez preparado el proyecto:
-
-1. Verifica que el vendor bundle está actualizado
-2. Copia la carpeta del juego a la consola en:
-
-```
-/roms/pygame
+Crear bundle y sincronizarlo con la consola:
+```commandline
+bash deploy_to_console.sh
 ```
 
 No es necesario ningún paso adicional.
