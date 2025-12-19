@@ -41,7 +41,7 @@ class App:
             EntityEditorScene(),
         ]
 
-        self._scene_index = 2
+        self._scene_index = 1
         self.scene: Scene = self.scenes[self._scene_index]
 
         console.print(Panel.fit("✅ Pygame initialized", border_style="green"))
