@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-pygametemplate = "game.main:main"
+pygametemplate = "game.cli:main"
 
 [tool.setuptools]
 packages = ["game", "game.core", "game.scenes"]

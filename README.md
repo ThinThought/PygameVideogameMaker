@@ -7,6 +7,16 @@ Este proyecto funciona como **plantilla base para juegos y aplicaciones en Pygam
 La arquitectura se divide en tres capas principales: **core**, **scenes** y **entities**.
 Cada capa tiene responsabilidades claras y límites definidos.
 
+## Generar un nuevo proyecto
+
+Instala la plantilla (por ejemplo con `pip install -e .`) y ejecuta:
+
+```bash
+pygametemplate new MiJuego
+```
+
+El comando creará una carpeta con la estructura completa, ajustará el `pyproject.toml`, renombrará el launcher `.pygame` y dejará todo listo para iterar. Puedes especificar otra ruta raíz con `--output-dir`. Si no pasas subcomando, `pygametemplate` sigue ejecutando el juego actual (equivalente a `pygametemplate run`).
+
 ---
 
 ## 1. Core
