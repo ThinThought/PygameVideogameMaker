@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "metadata": {
+    "name": "editor_export.eei",
+    "description": "",
+    "tags": []
+  },
+  "scene": {
+    "canvas": [
+      545,
+      644
+    ],
+    "origin": [
+      0,
+      0
+    ]
+  },
+  "nodes": [
+    {
+      "id": "env-001",
+      "kind": "environment",
+      "type": "game.environments.black_zone.BlackZone",
+      "parent": null,
+      "transform": {
+        "position": [
+          283.0,
+          454.0
+        ]
+      },
+      "state": {
+        "dims": [
+          200.0,
+          200.0
+        ]
+      },
+      "children": [
+        "ent-001",
+        "ent-002",
+        "ent-003"
+      ]
+    },
+    {
+      "id": "ent-001",
+      "kind": "entity",
+      "type": "game.entities.mouth.Mouth",
+      "parent": "env-001",
+      "transform": {
+        "position": [
+          272.0,
+          287.0
+        ]
+      },
+      "state": {
+        "radius": 18,
+        "open_amount": 0.0,
+        "open_speed": 6.0,
+        "talking": false
+      },
+      "children": []
+    },
+    {
+      "id": "ent-002",
+      "kind": "entity",
+      "type": "game.entities.eye.Eye",
+      "parent": "env-001",
+      "transform": {
+        "position": [
+          222.0,
+          222.0
+        ]
+      },
+      "state": {
+        "radius": 22,
+        "blink_duration": 0.12,
+        "blink_timer": 0.0,
+        "blinking": false
+      },
+      "children": []
+    },
+    {
+      "id": "ent-003",
+      "kind": "entity",
+      "type": "game.entities.eye.Eye",
+      "parent": "env-001",
+      "transform": {
+        "position": [
+          326.0,
+          225.0
+        ]
+      },
+      "state": {
+        "radius": 22,
+        "blink_duration": 0.12,
+        "blink_timer": 0.0,
+        "blinking": false
+      },
+      "children": []
+    }
+  ],
+  "interactions": []
+}

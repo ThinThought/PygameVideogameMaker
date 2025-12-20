@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-IP="192.168.1.90"
+IP="192.168.1.148"
 DEST="root@$IP:/userdata/roms/pygame"
 GAME_NAME="PygameTemplate"
 

@@ -19,14 +19,14 @@ from game.scenes.base import Scene
 console = Console()
 
 
-def _build_scenes() -> list[Scene]:
+def _build_scenes() -> list[type[Scene]]:
     scene_classes = []
     for name in getattr(scenes_mod, "__all__", []):
         obj = getattr(scenes_mod, name, None)
         if isinstance(obj, type) and issubclass(obj, Scene):
             scene_classes.append(obj)
 
-    return [cls() for cls in scene_classes]
+    return scene_classes
 
 
 class App:
@@ -59,7 +59,7 @@ class App:
 
         self.scenes = _build_scenes()
         self._scene_index = 1
-        self.scene = self.scenes[self._scene_index]
+        self.scene: Scene | None = None
 
         console.print(Panel.fit("✅ Pygame initialized", border_style="green"))
         console.print(Panel.fit("F1/F2 o TAB/SHIFT+TAB: cambiar escena", border_style="cyan"))
@@ -86,13 +86,15 @@ class App:
             return
 
         new_index = self._wrap_index(index)
-        if new_index == self._scene_index:
+        if new_index == self._scene_index and self.scene is not None:
             return
 
-        self.scene.on_exit(self)
+        if self.scene is not None:
+            self.scene.on_exit(self)
 
         self._scene_index = new_index
-        self.scene = self.scenes[self._scene_index]
+        scene_cls = self.scenes[self._scene_index]
+        self.scene = scene_cls()
         self.scene.on_enter(self)
 
         self._toast_text = f"{self.scene.__class__.__name__}  ({self._scene_index + 1}/{len(self.scenes)})"
@@ -142,7 +144,11 @@ class App:
     # --- Main loop -------------------------------------------------------
 
     def run(self) -> None:
-        self.scene.on_enter(self)
+        if self.scene is None:
+            self.set_scene(self._scene_index)
+
+        if self.scene is None:
+            return
 
         while self.running:
             dt = self.clock.tick()
@@ -201,15 +207,18 @@ class App:
                 if ev.type == pygame.JOYBUTTONUP:
                     self.joy_buttons_down.discard(ev.button)
 
-                self.scene.handle_event(self, ev)
+                if self.scene is not None:
+                    self.scene.handle_event(self, ev)
 
             # Update
-            self.scene.update(self, dt)
+            if self.scene is not None:
+                self.scene.update(self, dt)
 
             # Render scene into viewport-sized surface
             vp = self.scene_viewport()
             scene_surf = self._ensure_scene_surface(vp)
-            self.scene.render(self, scene_surf)
+            if self.scene is not None:
+                self.scene.render(self, scene_surf)
             self.screen.blit(scene_surf, vp.topleft)
 
             # HUD overlay
@@ -218,7 +227,8 @@ class App:
 
             pygame.display.flip()
 
-        self.scene.on_exit(self)
+        if self.scene is not None:
+            self.scene.on_exit(self)
         self.audio.stop_all_sounds()
         self.audio.stop_music()
         pygame.quit()

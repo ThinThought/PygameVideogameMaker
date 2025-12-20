@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pygame
 from game.scenes.base import Scene, AppLike
 import game.entities as entities
@@ -29,6 +31,7 @@ class EditorScene(Scene):
         self._tree_hitboxes: list[tuple[pygame.Rect, int]] = []
 
         self._last_size: tuple[int, int] | None = None
+        self._last_saved_path: Path | None = None
 
     # ---------------- Layout ----------------
 
@@ -332,6 +335,9 @@ class EditorScene(Scene):
             if ev.key in (pygame.K_DELETE, pygame.K_BACKSPACE):
                 self._delete_selected()
                 return
+            if ev.key == pygame.K_s and (ev.mod & pygame.KMOD_CTRL):
+                self._save_composition(app)
+                return
 
         if ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1 and pos is not None:
             # 1) palette -> spawn + drag
@@ -461,3 +467,28 @@ class EditorScene(Scene):
 
     def _selected_label(self) -> str:
         return self.model.selected_label()
+
+    # ---------- Saving ----------
+
+    def _composition_output_path(self) -> Path:
+        root = Path(__file__).resolve().parents[2]
+        return root / "configs" / "compositions" / "editor_export.eei.json"
+
+    def _save_composition(self, app: AppLike) -> None:
+        target = self._composition_output_path()
+        canvas = [self.canvas_rect.width or 640, self.canvas_rect.height or 360]
+        try:
+            path = self.model.save_composition(
+                target,
+                metadata={"name": target.stem},
+                scene={"canvas": canvas, "origin": [0, 0]},
+            )
+        except Exception as exc:  # pragma: no cover - feedback
+            self._print_status(f"[Editor] Error al guardar composición: {exc}")
+            return
+
+        self._last_saved_path = path
+        self._print_status(f"[Editor] Composición guardada en {path}")
+
+    def _print_status(self, msg: str) -> None:
+        print(msg)
