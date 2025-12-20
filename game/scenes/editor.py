@@ -33,6 +33,20 @@ class EditorScene(Scene):
         self._last_size: tuple[int, int] | None = None
         self._last_saved_path: Path | None = None
 
+        self.scene_width = 0
+        self.scene_height = 0
+        self.canvas_rect = pygame.Rect(0, 0, 0, 0)
+
+        self.vcursor_enabled = False
+        self.vcursor_pos = pygame.Vector2(80, 80)
+        self.vcursor_vel = pygame.Vector2(0, 0)
+        self.vcursor_speed = 450.0  # px/s
+        self.vcursor_deadzone = 0.18
+        self.vcursor_buttons: dict[int, bool] = {1: False, 3: False}  # LMB/RMB
+
+    def on_enter(self, app: AppLike) -> None:
+        self._sync_vcursor_enabled()
+
     # ---------------- Layout ----------------
 
     def _ensure_layout(self, screen: pygame.Surface) -> None:
@@ -108,10 +122,13 @@ class EditorScene(Scene):
     # ---------------- Update / Events ----------------
 
     def update(self, app: AppLike, dt: float) -> None:
-        for node in self.model.iter_drawable_nodes():
-            updater = getattr(node.payload, "update", None)
-            if callable(updater):
-                updater(app, dt)
+        self._sync_vcursor_enabled()
+        # Keep editor preview static so the authored pose matches MainScene playback.
+        if self.vcursor_enabled:
+            self.vcursor_pos += self.vcursor_vel * dt
+            # clamp a pantalla (coords escena)
+            self.vcursor_pos.x = max(0, min(self.scene_width - 1, self.vcursor_pos.x))
+            self.vcursor_pos.y = max(0, min(self.scene_height - 1, self.vcursor_pos.y))
 
     # (tu handle_event lo puedes mantener, pero recuerda: VIDEORESIZE en escenas no hace falta si el core gestiona)
     # y recuerda convertir mouse a local si usas viewport/hud.
@@ -126,6 +143,11 @@ class EditorScene(Scene):
         self._render_canvas(app, screen)
         self._render_palettes(app, screen)
         self._render_inspector(app, screen)
+        if self.vcursor_enabled:
+            x, y = int(self.vcursor_pos.x), int(self.vcursor_pos.y)
+            pygame.draw.circle(screen, (255, 255, 255), (x, y), 4, 1)
+            pygame.draw.line(screen, (255, 255, 255), (x - 8, y), (x + 8, y), 1)
+            pygame.draw.line(screen, (255, 255, 255), (x, y - 8), (x, y + 8), 1)
 
     # ---------------- Render helpers ----------------
 
@@ -321,6 +343,31 @@ class EditorScene(Scene):
             s = "<unrepr-able>"
         return s if len(s) <= 70 else s[:67] + "..."
 
+    # ---------------- VCursor helpers ----------------
+
+    def _sync_vcursor_enabled(self) -> None:
+        self._set_vcursor_enabled(self._has_any_joystick())
+
+    def _has_any_joystick(self) -> bool:
+        if not pygame.joystick.get_init():
+            return False
+        try:
+            return pygame.joystick.get_count() > 0
+        except pygame.error:
+            return False
+
+    def _set_vcursor_enabled(self, enabled: bool) -> None:
+        if self.vcursor_enabled == enabled:
+            return
+        self.vcursor_enabled = enabled
+        if not enabled:
+            self.vcursor_vel.xy = (0.0, 0.0)
+            pos = (int(self.vcursor_pos.x), int(self.vcursor_pos.y))
+            for button, was_down in list(self.vcursor_buttons.items()):
+                if was_down:
+                    self._pointer_up(button, pos)
+                self.vcursor_buttons[button] = False
+
 
     # ---------------- Interaction ----------------
 
@@ -330,6 +377,15 @@ class EditorScene(Scene):
             return
 
         pos = self._event_pos_local(app, ev)
+        if ev.type == pygame.MOUSEBUTTONDOWN and pos is not None:
+            self._pointer_down(ev.button, pos);
+            return
+        if ev.type == pygame.MOUSEBUTTONUP and pos is not None:
+            self._pointer_up(ev.button, pos);
+            return
+        if ev.type == pygame.MOUSEMOTION and pos is not None:
+            self._pointer_move(pos);
+            return
 
         if ev.type == pygame.KEYDOWN:
             if ev.key in (pygame.K_DELETE, pygame.K_BACKSPACE):
@@ -368,11 +424,56 @@ class EditorScene(Scene):
                 self._drag_to(pos)
             return
 
-        # passthrough
-        for node in self.model.iter_drawable_nodes():
-            h = getattr(node.payload, "handle_event", None)
-            if callable(h):
-                h(app, ev)
+        if ev.type == pygame.JOYAXISMOTION and self.vcursor_enabled:
+            # típico: axis 0 = x, axis 1 = y
+            if ev.axis in (0, 1):
+                # lee ambos ejes del joystick 0 (si quieres algo más general, lo guardas)
+                joy = pygame.joystick.Joystick(0)
+                ax = joy.get_axis(0)
+                ay = joy.get_axis(1)
+
+                def dz(v: float, dead: float) -> float:
+                    return 0.0 if abs(v) < dead else v
+
+                ax = dz(ax, self.vcursor_deadzone)
+                ay = dz(ay, self.vcursor_deadzone)
+
+                self.vcursor_vel.x = ax * self.vcursor_speed
+                self.vcursor_vel.y = ay * self.vcursor_speed
+
+                # opcional: generar un “motion” lógico cuando cambie
+                self._pointer_move((int(self.vcursor_pos.x), int(self.vcursor_pos.y)))
+            return
+
+        if ev.type == pygame.JOYHATMOTION and self.vcursor_enabled:
+            hx, hy = ev.value  # -1/0/1
+            self.vcursor_vel.x = hx * self.vcursor_speed
+            self.vcursor_vel.y = -hy * self.vcursor_speed  # ojo: arriba suele ser +1, invertimos Y
+            self._pointer_move((int(self.vcursor_pos.x), int(self.vcursor_pos.y)))
+            return
+
+        if ev.type in (pygame.JOYBUTTONDOWN, pygame.JOYBUTTONUP) and self.vcursor_enabled:
+            is_down = (ev.type == pygame.JOYBUTTONDOWN)
+
+            # mapping provisional (lo ajustas con tu test)
+            JOY_A = 5
+            JOY_B = 4
+
+            if ev.button == JOY_A:
+                self.vcursor_buttons[1] = is_down
+                if is_down:
+                    self._pointer_down(1, (int(self.vcursor_pos.x), int(self.vcursor_pos.y)))
+                else:
+                    self._pointer_up(1, (int(self.vcursor_pos.x), int(self.vcursor_pos.y)))
+                return
+
+            if ev.button == JOY_B:
+                self.vcursor_buttons[3] = is_down
+                if is_down:
+                    self._pointer_down(3, (int(self.vcursor_pos.x), int(self.vcursor_pos.y)))
+                else:
+                    self._pointer_up(3, (int(self.vcursor_pos.x), int(self.vcursor_pos.y)))
+                return
 
     def _event_pos_local(self, app: AppLike, ev: pygame.event.Event) -> tuple[int, int] | None:
         """Convierte ev.pos (coords ventana) a coords del viewport."""
@@ -492,3 +593,35 @@ class EditorScene(Scene):
 
     def _print_status(self, msg: str) -> None:
         print(msg)
+
+    def _pointer_down(self, button: int, pos: tuple[int, int]) -> None:
+        if button != 1:
+            # por ahora, right click no hace nada (o cancela drag / abre menú)
+            if button == 3:
+                self.dragging = False
+                self.drag_mode = None
+            return
+
+        hit = self._palette_hit(pos)
+        if hit is not None:
+            target, idx = hit
+            self._spawn_from_palette(target, idx, pos)
+            return
+
+        if self._tree_hit(pos):
+            return
+
+        if self.canvas_rect.collidepoint(pos):
+            hit2 = self._select_node_at(pos)
+            if hit2 is not None:
+                self._start_drag_existing(pos)
+            return
+
+    def _pointer_move(self, pos: tuple[int, int]) -> None:
+        if self.dragging:
+            self._drag_to(pos)
+
+    def _pointer_up(self, button: int, pos: tuple[int, int]) -> None:
+        if button == 1:
+            self.dragging = False
+            self.drag_mode = None

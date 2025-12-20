@@ -4,6 +4,8 @@
 
 Este proyecto funciona como **plantilla base para juegos y aplicaciones en Pygame**, pensada para ejecutarse tanto en PC como en consolas retro compatibles con Pygame.
 
+> **Descargo de responsabilidad:** la plantilla se entrega tal cual; úsala y modifícala *at your own risk* y verifica cada cambio antes de desplegarlo.
+
 La arquitectura se divide en tres capas principales: **core**, **scenes** y **entities**.
 Cada capa tiene responsabilidades claras y límites definidos.
 

@@ -1,7 +1,9 @@
 #!/usr/bin/env sh
 
-IP="192.168.1.148"
-DEST="root@$IP:/userdata/roms/pygame"
+: "${DEPLOY_CONSOLE_IP:?Define DEPLOY_CONSOLE_IP con la IP de la consola de destino}"
+IP="$DEPLOY_CONSOLE_IP"
+DEPLOY_CONSOLE_USER="${DEPLOY_CONSOLE_USER:-root}"
+DEST="$DEPLOY_CONSOLE_USER@$IP:/userdata/roms/pygame"
 GAME_NAME="PygameTemplate"
 
 PROJECT_DIR="."
