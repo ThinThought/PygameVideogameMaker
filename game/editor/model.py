@@ -8,6 +8,8 @@ import json
 
 import pygame
 
+from game.compositions import CompositionRuntime
+
 from .registry import PaletteRegistry, PaletteKind, PaletteItem
 
 NodeKind = Literal["root", "entity", "environment"]
@@ -41,6 +43,9 @@ class EditorModel:
 
     def __init__(self, registry: PaletteRegistry) -> None:
         self.registry = registry
+        self._initialize_state()
+
+    def _initialize_state(self) -> None:
         self.nodes: dict[int, Node] = {}
         self._order: list[int] = []
         self._label_counts: dict[str, int] = {}
@@ -48,6 +53,9 @@ class EditorModel:
         self._next_id = 1
         self.root_id = self._create_root()
         self.selected_id: int | None = None
+
+    def _reset_state(self) -> None:
+        self._initialize_state()
 
     # ---------- Creación ----------
 
@@ -273,6 +281,40 @@ class EditorModel:
 
     # ---------- Export / Persistencia ----------
 
+    def load_from_runtime(self, runtime: CompositionRuntime) -> None:
+        """Reconstruye el árbol del editor a partir de una composición ya cargada."""
+        self._reset_state()
+
+        comp_to_local: dict[str, int] = {}
+        insertion_order: list[int] = []
+
+        for runtime_node in runtime.iter_nodes():
+            parent_local = self.root_id
+            if runtime_node.parent is not None:
+                parent_local = comp_to_local.get(runtime_node.parent, self.root_id)
+
+            base_name = self._base_name_from_type_path(runtime_node.type_path)
+            label = self._make_label(base_name)
+            node = Node(
+                id=self._next_id,
+                kind=runtime_node.kind,
+                name=label,
+                base_name=base_name,
+                payload=runtime_node.instance,
+                parent=parent_local,
+                composition_id=runtime_node.id,
+            )
+
+            self.nodes[node.id] = node
+            self._attach_child(parent_local, node.id)
+            comp_to_local[runtime_node.id] = node.id
+            insertion_order.append(node.id)
+            self._next_id += 1
+            self._sync_composition_counter(runtime_node.kind, runtime_node.id)
+
+        self._order = insertion_order
+        self.selected_id = None
+
     def build_composition(
         self,
         *,
@@ -325,6 +367,32 @@ class EditorModel:
         return file_path
 
     # ----- Helpers -----
+
+    def _base_name_from_type_path(self, type_path: str) -> str:
+        _, _, attr = type_path.rpartition(".")
+        return attr or type_path
+
+    def _sync_composition_counter(self, kind: PaletteKind, comp_id: str) -> None:
+        current = self._composition_id_counts.get(kind, 0)
+        trailing = self._parse_trailing_int(comp_id)
+        if trailing is None:
+            return
+        if trailing > current:
+            self._composition_id_counts[kind] = trailing
+
+    def _parse_trailing_int(self, value: str) -> int | None:
+        digits = ""
+        for ch in reversed(value):
+            if ch.isdigit():
+                digits = ch + digits
+            else:
+                break
+        if not digits:
+            return None
+        try:
+            return int(digits)
+        except ValueError:
+            return None
 
     def _node_to_entry(self, node: Node) -> dict[str, Any]:
         payload = node.payload

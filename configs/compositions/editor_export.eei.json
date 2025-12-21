@@ -17,14 +17,14 @@
   },
   "nodes": [
     {
-      "id": "env-001",
+      "id": "env-002",
       "kind": "environment",
       "type": "game.environments.black_zone.BlackZone",
       "parent": null,
       "transform": {
         "position": [
-          291.0,
-          414.0
+          232.0,
+          510.0
         ]
       },
       "state": {
@@ -43,11 +43,11 @@
       "id": "ent-001",
       "kind": "entity",
       "type": "game.entities.mouth.Mouth",
-      "parent": "env-001",
+      "parent": "env-002",
       "transform": {
         "position": [
-          289.0,
-          270.0
+          231.0,
+          370.0
         ]
       },
       "state": {
@@ -62,11 +62,11 @@
       "id": "ent-002",
       "kind": "entity",
       "type": "game.entities.eye.Eye",
-      "parent": "env-001",
+      "parent": "env-002",
       "transform": {
         "position": [
-          348.0,
-          223.0
+          169.0,
+          333.0
         ]
       },
       "state": {
@@ -81,11 +81,11 @@
       "id": "ent-003",
       "kind": "entity",
       "type": "game.entities.eye.Eye",
-      "parent": "env-001",
+      "parent": "env-002",
       "transform": {
         "position": [
-          246.0,
-          225.0
+          292.0,
+          342.0
         ]
       },
       "state": {

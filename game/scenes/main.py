@@ -14,11 +14,9 @@ class MainScene(Scene):
 
     def on_enter(self, app: AppLike) -> None:
         self._load_composition(app)
-        app.audio.play_music("demo.mp3", volume=1.0, fade_ms=500)
 
     def on_exit(self, app: AppLike) -> None:
         self._teardown_nodes(app)
-        app.audio.stop_music(fade_ms=200)
 
     def handle_event(self, app: AppLike, ev: pygame.event.Event) -> None:
         for node in self._iter_runtime_nodes():

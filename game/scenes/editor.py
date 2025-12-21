@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pygame
+from game.compositions import load_composition
 from game.scenes.base import Scene, AppLike
 import game.entities as entities
 import game.environments as environments
@@ -20,6 +21,8 @@ class EditorScene(Scene):
 
         self.font = pygame.font.Font(None, 20)
         self.font_mono = pygame.font.Font(None, 18)
+        self.toolbar_title = "Scene"
+        self._toolbar_label_pad = 20
 
         self.margin = 20
         self.gap = 12
@@ -32,10 +35,17 @@ class EditorScene(Scene):
 
         self._last_size: tuple[int, int] | None = None
         self._last_saved_path: Path | None = None
+        self._composition_path: Path | None = None
 
         self.scene_width = 0
         self.scene_height = 0
         self.canvas_rect = pygame.Rect(0, 0, 0, 0)
+        self.toolbar_rect = pygame.Rect(0, 0, 0, 0)
+        self.toolbar_buttons: list[tuple[str, str]] = [
+            ("save", "Guardar"),
+            ("play", "Play"),
+        ]
+        self.toolbar_button_rects: dict[str, pygame.Rect] = {}
 
         self.vcursor_enabled = False
         self.vcursor_pos = pygame.Vector2(80, 80)
@@ -46,6 +56,7 @@ class EditorScene(Scene):
 
     def on_enter(self, app: AppLike) -> None:
         self._sync_vcursor_enabled()
+        self._load_initial_composition()
 
     # ---------------- Layout ----------------
 
@@ -66,25 +77,30 @@ class EditorScene(Scene):
         self.canvas_rect = pygame.Rect(m, m, left_w - m, h - 2 * m)
 
         right_x = self.canvas_rect.right + gap
-        right_w = w - right_x - m
-        self.inspector_rect = pygame.Rect(right_x, m, right_w, h - 2 * m)
+        right_w = max(0, w - right_x - m)
+        right_panel_rect = pygame.Rect(right_x, m, right_w, h - 2 * m)
 
-        palette_h = min(180, self.inspector_rect.height // 3)
-        palette_width = self.inspector_rect.width
+        toolbar_h = min(44, right_panel_rect.height)
+        self.toolbar_rect = pygame.Rect(right_panel_rect.x, right_panel_rect.y, right_panel_rect.width, toolbar_h)
+
+        palette_y = self.toolbar_rect.bottom + gap
+        palette_bottom_limit = right_panel_rect.bottom
+        available_palettes_h = max(0, palette_bottom_limit - palette_y)
+        palette_h = min(180, available_palettes_h // 3) if available_palettes_h > 0 else 0
+        palette_width = right_panel_rect.width
         column_gap = min(gap, palette_width)
         entity_w = max(0, (palette_width - column_gap) // 2)
         env_w = max(0, palette_width - entity_w - column_gap)
 
-        palette_y = self.inspector_rect.y
-        palette_x = self.inspector_rect.x
+        palette_x = right_panel_rect.x
         self.entities_palette_rect = pygame.Rect(palette_x, palette_y, entity_w, palette_h)
         env_x = self.entities_palette_rect.right + column_gap
         self.environments_palette_rect = pygame.Rect(env_x, palette_y, env_w, palette_h)
 
         palettes_bottom = max(self.entities_palette_rect.bottom, self.environments_palette_rect.bottom)
         insp_y = palettes_bottom + gap
-        insp_h = self.inspector_rect.bottom - insp_y
-        self.inspector_rect = pygame.Rect(self.inspector_rect.x, insp_y, self.inspector_rect.width, insp_h)
+        insp_h = right_panel_rect.bottom - insp_y
+        self.inspector_rect = pygame.Rect(right_panel_rect.x, insp_y, right_panel_rect.width, max(0, insp_h))
 
         tree_h = min(max(120, int(self.inspector_rect.height * 0.45)), self.inspector_rect.height)
         attr_y = self.inspector_rect.y + tree_h + gap
@@ -96,6 +112,7 @@ class EditorScene(Scene):
         self._tree_hitboxes = []
 
         self._rebuild_palette_item_rects()
+        self._rebuild_toolbar_buttons()
 
     def _rebuild_palette_item_rects(self) -> None:
         self.entity_items_rects = self._build_palette_rects(self.entities_palette_rect, len(self.registry.entities))
@@ -103,6 +120,32 @@ class EditorScene(Scene):
             self.environments_palette_rect,
             len(self.registry.environments),
         )
+
+    def _rebuild_toolbar_buttons(self) -> None:
+        self.toolbar_button_rects = {}
+        rect = self.toolbar_rect
+        if rect.width <= 0 or rect.height <= 0 or not self.toolbar_buttons:
+            return
+
+        pad_x = 12
+        btn_gap = 10
+        btn_count = len(self.toolbar_buttons)
+        label_w = self.font.size(self.toolbar_title)[0] + self._toolbar_label_pad
+        pad_left = pad_x + label_w
+        pad_right = pad_x
+        available_w = rect.width - pad_left - pad_right - (btn_gap * (btn_count - 1))
+        available_w = max(0, available_w)
+        btn_w = available_w // btn_count if btn_count else 0
+        if btn_count and btn_w <= 0:
+            btn_w = max(0, rect.width // btn_count)
+
+        btn_h = max(0, rect.height - 16)
+        y = rect.y + (rect.height - btn_h) // 2
+        x = rect.x + pad_left
+
+        for key, _ in self.toolbar_buttons:
+            self.toolbar_button_rects[key] = pygame.Rect(x, y, btn_w, btn_h)
+            x += btn_w + btn_gap
 
     def _build_palette_rects(self, rect: pygame.Rect, count: int) -> list[pygame.Rect]:
         rects: list[pygame.Rect] = []
@@ -141,6 +184,7 @@ class EditorScene(Scene):
         screen.fill("black")
 
         self._render_canvas(app, screen)
+        self._render_toolbar(app, screen)
         self._render_palettes(app, screen)
         self._render_inspector(app, screen)
         if self.vcursor_enabled:
@@ -165,6 +209,45 @@ class EditorScene(Scene):
                 self._render_selection_ring(screen, node)
 
         screen.set_clip(prev_clip)
+
+    def _render_toolbar(self, app: AppLike, screen: pygame.Surface) -> None:
+        rect = self.toolbar_rect
+        if rect.width <= 0 or rect.height <= 0:
+            return
+
+        pygame.draw.rect(screen, (25, 25, 25), rect, border_radius=6)
+
+        mouse = self._mouse_local(app)
+        for key, label in self.toolbar_buttons:
+            btn_rect = self.toolbar_button_rects.get(key)
+            if btn_rect is None or btn_rect.width <= 0 or btn_rect.height <= 0:
+                continue
+            hovered = btn_rect.collidepoint(mouse)
+            base = (50, 50, 50)
+            if key == "play":
+                base = (40, 80, 40)
+            elif key == "save":
+                base = (60, 60, 60)
+
+            if hovered:
+                if key == "play":
+                    base = (60, 110, 60)
+                elif key == "save":
+                    base = (85, 75, 35)
+                else:
+                    base = (70, 70, 70)
+            pygame.draw.rect(screen, base, btn_rect, border_radius=6)
+            pygame.draw.rect(screen, (120, 120, 120), btn_rect, width=1, border_radius=6)
+
+            text = self.font_mono.render(label, True, (235, 235, 235))
+            tx = btn_rect.x + (btn_rect.width - text.get_width()) // 2
+            ty = btn_rect.y + (btn_rect.height - text.get_height()) // 2
+            screen.blit(text, (tx, ty))
+
+        header = self.font.render(self.toolbar_title, True, (220, 220, 220))
+        hx = rect.x + 12
+        hy = rect.y + (rect.height - header.get_height()) // 2
+        screen.blit(header, (hx, hy))
 
     def _render_selection_ring(self, screen: pygame.Surface, node) -> None:
         p = getattr(node.payload, "pos", None)
@@ -275,6 +358,18 @@ class EditorScene(Scene):
         msg = self.font_mono.render("No entities. Pick one from palette.", True, (160, 160, 160))
         screen.blit(msg, (rect.x + 10, rect.y + 40))
 
+    # ---------------- Toolbar ----------------
+
+    def _toolbar_hit(self, pos: tuple[int, int]) -> str | None:
+        if self.toolbar_rect.width <= 0 or self.toolbar_rect.height <= 0:
+            return None
+        if not self.toolbar_rect.collidepoint(pos):
+            return None
+        for key, rect in self.toolbar_button_rects.items():
+            if rect.collidepoint(pos):
+                return key
+        return None
+
     # ---------------- Utilities ----------------
 
     def _mouse_local(self, app: AppLike) -> tuple[int, int]:
@@ -378,7 +473,7 @@ class EditorScene(Scene):
 
         pos = self._event_pos_local(app, ev)
         if ev.type == pygame.MOUSEBUTTONDOWN and pos is not None:
-            self._pointer_down(ev.button, pos);
+            self._pointer_down(app, ev.button, pos);
             return
         if ev.type == pygame.MOUSEBUTTONUP and pos is not None:
             self._pointer_up(ev.button, pos);
@@ -462,7 +557,7 @@ class EditorScene(Scene):
             if ev.button == JOY_A:
                 self.vcursor_buttons[1] = is_down
                 if is_down:
-                    self._pointer_down(1, (int(self.vcursor_pos.x), int(self.vcursor_pos.y)))
+                    self._pointer_down(app, 1, (int(self.vcursor_pos.x), int(self.vcursor_pos.y)))
                 else:
                     self._pointer_up(1, (int(self.vcursor_pos.x), int(self.vcursor_pos.y)))
                 return
@@ -470,7 +565,7 @@ class EditorScene(Scene):
             if ev.button == JOY_B:
                 self.vcursor_buttons[3] = is_down
                 if is_down:
-                    self._pointer_down(3, (int(self.vcursor_pos.x), int(self.vcursor_pos.y)))
+                    self._pointer_down(app, 3, (int(self.vcursor_pos.x), int(self.vcursor_pos.y)))
                 else:
                     self._pointer_up(3, (int(self.vcursor_pos.x), int(self.vcursor_pos.y)))
                 return
@@ -562,9 +657,14 @@ class EditorScene(Scene):
         self.model.move_selected_within(self.canvas_rect, desired)
 
     def _delete_selected(self) -> None:
+        node = self.model.selected_node()
+        if node is None:
+            return
+
         self.model.delete_selected()
         self.dragging = False
         self.drag_mode = None
+        self._save_composition()
 
     def _selected_label(self) -> str:
         return self.model.selected_label()
@@ -572,10 +672,44 @@ class EditorScene(Scene):
     # ---------- Saving ----------
 
     def _composition_output_path(self) -> Path:
+        if self._composition_path is not None:
+            return self._composition_path
         root = Path(__file__).resolve().parents[2]
         return root / "configs" / "compositions" / "editor_export.eei.json"
 
-    def _save_composition(self, app: AppLike) -> None:
+    def _composition_candidates(self) -> list[Path]:
+        root = Path(__file__).resolve().parents[2] / "configs" / "compositions"
+        return [
+            root / "editor_export.eei.json",
+            root / "demo_face.eei.json",
+        ]
+
+    def _initial_composition_path(self) -> Path | None:
+        for candidate in self._composition_candidates():
+            if candidate.exists():
+                return candidate
+        return None
+
+    def _load_initial_composition(self) -> None:
+        path = self._initial_composition_path()
+        if path is None:
+            self._print_status("[Editor] No hay composición inicial. Empieza una nueva escena.")
+            return
+        try:
+            runtime = load_composition(path)
+        except FileNotFoundError:
+            self._print_status(f"[Editor] El archivo inicial no existe: {path}")
+            return
+        except Exception as exc:  # pragma: no cover - feedback
+            self._print_status(f"[Editor] Error al cargar composición: {exc}")
+            return
+
+        self.model.load_from_runtime(runtime)
+        self._composition_path = path
+        self._last_saved_path = path
+        self._print_status(f"[Editor] Composición cargada desde {path.name}")
+
+    def _save_composition(self, app: AppLike | None = None) -> bool:
         target = self._composition_output_path()
         canvas = [self.canvas_rect.width or 640, self.canvas_rect.height or 360]
         try:
@@ -586,20 +720,52 @@ class EditorScene(Scene):
             )
         except Exception as exc:  # pragma: no cover - feedback
             self._print_status(f"[Editor] Error al guardar composición: {exc}")
-            return
+            return False
 
         self._last_saved_path = path
+        self._composition_path = path
         self._print_status(f"[Editor] Composición guardada en {path}")
+        return True
+
+    def _handle_toolbar_click(self, app: AppLike, key: str) -> None:
+        if key == "save":
+            self._save_composition(app)
+        elif key == "play":
+            self._play_from_editor(app)
+
+    def _play_from_editor(self, app: AppLike) -> None:
+        if self._save_composition(app):
+            self._goto_main_scene(app)
+
+    def _goto_main_scene(self, app: AppLike) -> None:
+        set_scene = getattr(app, "set_scene", None)
+        scene_list = getattr(app, "scenes", None)
+        if not callable(set_scene) or not scene_list:
+            self._print_status("[Editor] No puedo saltar a MainScene desde aquí.")
+            return
+
+        for idx, scene_cls in enumerate(scene_list):
+            if getattr(scene_cls, "__name__", "") == "MainScene":
+                self._print_status("[Editor] Ejecutando composición en MainScene...")
+                set_scene(idx)
+                return
+
+        self._print_status("[Editor] MainScene no está registrada en esta app.")
 
     def _print_status(self, msg: str) -> None:
         print(msg)
 
-    def _pointer_down(self, button: int, pos: tuple[int, int]) -> None:
+    def _pointer_down(self, app: AppLike, button: int, pos: tuple[int, int]) -> None:
         if button != 1:
             # por ahora, right click no hace nada (o cancela drag / abre menú)
             if button == 3:
                 self.dragging = False
                 self.drag_mode = None
+            return
+
+        toolbar_hit = self._toolbar_hit(pos)
+        if toolbar_hit is not None:
+            self._handle_toolbar_click(app, toolbar_hit)
             return
 
         hit = self._palette_hit(pos)
@@ -623,5 +789,8 @@ class EditorScene(Scene):
 
     def _pointer_up(self, button: int, pos: tuple[int, int]) -> None:
         if button == 1:
+            was_spawn_new = (self.drag_mode == "spawn-new")
             self.dragging = False
             self.drag_mode = None
+            if was_spawn_new:
+                self._save_composition()
