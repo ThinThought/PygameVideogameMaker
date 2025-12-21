@@ -1,6 +1,7 @@
 from __future__ import annotations
 import pygame
 from game.entities.base import Entity, AppLike
+from game.input import ActionBinding, InputBinding
 
 
 class Mouth(Entity):
@@ -8,6 +9,15 @@ class Mouth(Entity):
     Entidad Boca básica.
     Puede abrirse y cerrarse (hablar / reaccionar).
     """
+    INPUT_ACTIONS = [
+        ActionBinding(
+            action="Toggle Talk",
+            description="Alterna animación de habla con la barra espaciadora.",
+            bindings=(
+                InputBinding(device="keyboard", control="K_SPACE", label="Space"),
+            ),
+        ),
+    ]
 
     def __init__(self, pos):
         self.pos = pygame.Vector2(pos)

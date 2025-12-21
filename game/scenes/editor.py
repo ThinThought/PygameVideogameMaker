@@ -8,9 +8,54 @@ from game.scenes.base import Scene, AppLike
 import game.entities as entities
 import game.environments as environments
 from game.editor import EditorModel, PaletteRegistry, PaletteItem
+from game.input import ActionBinding, InputBinding, ControllerProfile
 
 
 class EditorScene(Scene):
+    INPUT_ACTIONS = [
+        ActionBinding(
+            action="Eliminar seleccion",
+            description="Delete/Backspace elimina el nodo activo.",
+            bindings=(
+                InputBinding(device="keyboard", control="K_DELETE", label="Delete"),
+                InputBinding(device="keyboard", control="K_BACKSPACE", label="Backspace"),
+            ),
+        ),
+        ActionBinding(
+            action="Guardar composicion",
+            description="Ctrl+S guarda la composicion abierta.",
+            bindings=(
+                InputBinding(device="keyboard", control="K_s", label="S", modifiers=("CTRL",)),
+            ),
+        ),
+        ActionBinding(
+            action="VCursor mover",
+            description="El stick izquierdo controla el cursor virtual.",
+            bindings=(
+                InputBinding(device="joystick_axis", control="left_x", label="Stick izquierdo X"),
+                InputBinding(device="joystick_axis", control="left_y", label="Stick izquierdo Y"),
+            ),
+        ),
+        ActionBinding(
+            action="VCursor primario",
+            description="Emula clic izquierdo con A/B para la edicion rapida.",
+            bindings=(
+                InputBinding(device="joystick_button", control="a", label="Boton A"),
+                InputBinding(device="joystick_button", control="b", label="Boton B"),
+                InputBinding(device="mouse", control="button1", label="Click izquierdo"),
+            ),
+        ),
+        ActionBinding(
+            action="VCursor secundario",
+            description="Emula clic derecho/context menu con botones Y/X.",
+            bindings=(
+                InputBinding(device="joystick_button", control="y", label="Boton Y"),
+                InputBinding(device="joystick_button", control="x", label="Boton X"),
+                InputBinding(device="mouse", control="button3", label="Click derecho"),
+            ),
+        ),
+    ]
+
     def __init__(self) -> None:
         self.registry = PaletteRegistry.from_modules(entities, environments)
         self.model = EditorModel(self.registry)
@@ -27,6 +72,8 @@ class EditorScene(Scene):
         self.margin = 20
         self.gap = 12
         self.palette_item_h = 28
+        self.preview_scale = 0.6  # 60% de la resolución objetivo
+        self.canvas_scale = 1.0
         self.entity_items_rects: list[pygame.Rect] = []
         self.environment_items_rects: list[pygame.Rect] = []
         self.tree_rect = pygame.Rect(0, 0, 0, 0)
@@ -40,6 +87,9 @@ class EditorScene(Scene):
         self.scene_width = 0
         self.scene_height = 0
         self.canvas_rect = pygame.Rect(0, 0, 0, 0)
+        self.scene_canvas_rect = pygame.Rect(0, 0, 0, 0)  # espacio virtual editable
+        self._canvas_surface: pygame.Surface | None = None
+        self._canvas_surface_size: tuple[int, int] | None = None
         self.toolbar_rect = pygame.Rect(0, 0, 0, 0)
         self.toolbar_buttons: list[tuple[str, str]] = [
             ("save", "Guardar"),
@@ -53,12 +103,36 @@ class EditorScene(Scene):
         self.vcursor_speed = 450.0  # px/s
         self.vcursor_deadzone = 0.18
         self.vcursor_buttons: dict[int, bool] = {1: False, 3: False}  # LMB/RMB
+        self.context_menu_active = False
+        self.context_menu_rect = pygame.Rect(0, 0, 0, 0)
+        self.context_menu_item_rects: list[tuple[str, pygame.Rect]] = []
+        self.context_menu_items: list[tuple[str, str]] = [("delete", "Delete")]
+        self.context_menu_target_id: int | None = None
+        self.context_menu_hover: str | None = None
+        root = Path(__file__).resolve().parents[2]
+        self._controller_cfg_path = root / "configs" / "controllers" / "generic.toml"
+        self.controller_profile = ControllerProfile.default()
+        self._vcursor_axes: tuple[int, int] = (0, 1)
+        self._vcursor_primary_buttons: tuple[int, ...] = (0,)
+        self._vcursor_secondary_buttons: tuple[int, ...] = (1,)
+        self._load_controller_profile()
 
     def on_enter(self, app: AppLike) -> None:
+        self._init_scene_canvas(app)
         self._sync_vcursor_enabled()
         self._load_initial_composition()
 
     # ---------------- Layout ----------------
+
+    def _init_scene_canvas(self, app: AppLike) -> None:
+        cfg = getattr(app, "cfg", None)
+        width = getattr(cfg, "width", None)
+        height = getattr(cfg, "height", None)
+        if not width or not height:
+            width, height = 1028, 720  # fallback
+        self.scene_canvas_rect = pygame.Rect(0, 0, int(width), int(height))
+        self._canvas_surface = None
+        self._canvas_surface_size = None
 
     def _ensure_layout(self, screen: pygame.Surface) -> None:
         size = screen.get_size()
@@ -74,9 +148,19 @@ class EditorScene(Scene):
         gap = self.gap
 
         left_w = int(w * 0.55)
-        self.canvas_rect = pygame.Rect(m, m, left_w - m, h - 2 * m)
+        canvas_area = pygame.Rect(m, m, max(0, left_w - m), max(0, h - 2 * m))
+        self.canvas_scale = self._compute_canvas_scale(canvas_area.width, canvas_area.height)
+        target_w = self.scene_canvas_rect.width or 1
+        target_h = self.scene_canvas_rect.height or 1
+        scaled_w = int(target_w * self.canvas_scale)
+        scaled_h = int(target_h * self.canvas_scale)
+        scaled_w = max(0, min(canvas_area.width, scaled_w))
+        scaled_h = max(0, min(canvas_area.height, scaled_h))
+        cx = canvas_area.x + max(0, (canvas_area.width - scaled_w) // 2)
+        cy = canvas_area.y + max(0, (canvas_area.height - scaled_h) // 2)
+        self.canvas_rect = pygame.Rect(cx, cy, scaled_w, scaled_h)
 
-        right_x = self.canvas_rect.right + gap
+        right_x = canvas_area.right + gap
         right_w = max(0, w - right_x - m)
         right_panel_rect = pygame.Rect(right_x, m, right_w, h - 2 * m)
 
@@ -113,6 +197,23 @@ class EditorScene(Scene):
 
         self._rebuild_palette_item_rects()
         self._rebuild_toolbar_buttons()
+
+    def _compute_canvas_scale(self, available_w: int, available_h: int) -> float:
+        if available_w <= 0 or available_h <= 0:
+            return 0.0
+        target_w = max(1, self.scene_canvas_rect.width)
+        target_h = max(1, self.scene_canvas_rect.height)
+        max_scale_w = available_w / target_w
+        max_scale_h = available_h / target_h
+        scale = min(self.preview_scale, max_scale_w, max_scale_h)
+        return max(0.0, scale)
+
+    def _ensure_canvas_surface(self) -> pygame.Surface:
+        size = (max(1, self.scene_canvas_rect.width), max(1, self.scene_canvas_rect.height))
+        if self._canvas_surface is None or self._canvas_surface_size != size:
+            self._canvas_surface = pygame.Surface(size).convert()
+            self._canvas_surface_size = size
+        return self._canvas_surface
 
     def _rebuild_palette_item_rects(self) -> None:
         self.entity_items_rects = self._build_palette_rects(self.entities_palette_rect, len(self.registry.entities))
@@ -187,28 +288,61 @@ class EditorScene(Scene):
         self._render_toolbar(app, screen)
         self._render_palettes(app, screen)
         self._render_inspector(app, screen)
+        self._render_context_menu(screen)
         if self.vcursor_enabled:
             x, y = int(self.vcursor_pos.x), int(self.vcursor_pos.y)
-            pygame.draw.circle(screen, (255, 255, 255), (x, y), 4, 1)
-            pygame.draw.line(screen, (255, 255, 255), (x - 8, y), (x + 8, y), 1)
-            pygame.draw.line(screen, (255, 255, 255), (x, y - 8), (x, y + 8), 1)
+
+            BLACK = (15, 15, 15)
+            WHITE = (245, 245, 245)
+            ACCENT = (40, 120, 255)  # azul frío, opcional
+
+            # --- halo exterior (blanco, se ve sobre fondos oscuros) ---
+            pygame.draw.circle(screen, WHITE, (x, y), 9, 2)
+
+            # --- outline principal (negro, se ve sobre blanco) ---
+            pygame.draw.circle(screen, BLACK, (x, y), 7, 2)
+
+            # --- núcleo sólido (negro) ---
+            pygame.draw.circle(screen, BLACK, (x, y), 2)
+
+            # --- cruz con doble capa ---
+            arm = 6
+
+            # sombra / outline
+            pygame.draw.line(screen, BLACK, (x - arm, y), (x + arm, y), 3)
+            pygame.draw.line(screen, BLACK, (x, y - arm), (x, y + arm), 3)
+
+            # capa clara encima
+            pygame.draw.line(screen, WHITE, (x - arm, y), (x + arm, y), 1)
+            pygame.draw.line(screen, WHITE, (x, y - arm), (x, y + arm), 1)
+
+            # --- punto de vida / dirección ---
+            pygame.draw.circle(screen, ACCENT, (x + 4, y - 4), 1)
 
     # ---------------- Render helpers ----------------
 
     def _render_canvas(self, app: AppLike, screen: pygame.Surface) -> None:
-        pygame.draw.rect(screen, "white", self.canvas_rect, border_radius=6)
+        rect = self.canvas_rect
+        if rect.width <= 0 or rect.height <= 0 or self.canvas_scale <= 0:
+            return
 
-        prev_clip = screen.get_clip()
-        screen.set_clip(self.canvas_rect.inflate(-4, -4))
+        target = self._ensure_canvas_surface()
+        target.fill("white")
 
         for node in self.model.iter_drawable_nodes():
             renderer = getattr(node.payload, "render", None)
             if callable(renderer):
-                renderer(app, screen)
+                renderer(app, target)
             if node.id == self.model.selected_id:
-                self._render_selection_ring(screen, node)
+                self._render_selection_ring(target, node)
 
-        screen.set_clip(prev_clip)
+        if (target.get_width(), target.get_height()) == (rect.width, rect.height):
+            screen.blit(target, rect.topleft)
+        else:
+            scaled = pygame.transform.smoothscale(target, (rect.width, rect.height))
+            screen.blit(scaled, rect.topleft)
+
+        pygame.draw.rect(screen, (200, 200, 200), rect, width=1, border_radius=6)
 
     def _render_toolbar(self, app: AppLike, screen: pygame.Surface) -> None:
         rect = self.toolbar_rect
@@ -249,12 +383,12 @@ class EditorScene(Scene):
         hy = rect.y + (rect.height - header.get_height()) // 2
         screen.blit(header, (hx, hy))
 
-    def _render_selection_ring(self, screen: pygame.Surface, node) -> None:
+    def _render_selection_ring(self, surface: pygame.Surface, node) -> None:
         p = getattr(node.payload, "pos", None)
         if p is None:
             return
         r = int(getattr(node.payload, "radius", 26)) + 6
-        pygame.draw.circle(screen, (255, 200, 0), (int(p.x), int(p.y)), r, 2)
+        pygame.draw.circle(surface, (255, 200, 0), (int(p.x), int(p.y)), r, 2)
 
     def _render_palettes(self, app: AppLike, screen: pygame.Surface) -> None:
         mouse = self._mouse_local(app)
@@ -302,6 +436,106 @@ class EditorScene(Scene):
     def _render_inspector(self, app: AppLike, screen: pygame.Surface) -> None:
         self._render_tree_panel(screen)
         self._render_attrs_panel(screen)
+
+    def _render_context_menu(self, screen: pygame.Surface) -> None:
+        if not self.context_menu_active:
+            return
+        rect = self.context_menu_rect
+        if rect.width <= 0 or rect.height <= 0:
+            return
+
+        pygame.draw.rect(screen, (20, 20, 20), rect, border_radius=6)
+        pygame.draw.rect(screen, (120, 120, 120), rect, width=1, border_radius=6)
+
+        label_map = {key: label for key, label in self.context_menu_items}
+        for key, item_rect in self.context_menu_item_rects:
+            hovered = key == self.context_menu_hover
+            color = (90, 50, 50) if hovered else (45, 45, 45)
+            pygame.draw.rect(screen, color, item_rect, border_radius=4)
+            text = label_map.get(key, key.title())
+            surf = self.font_mono.render(text, True, (235, 235, 235))
+            ty = item_rect.y + (item_rect.height - surf.get_height()) // 2
+            screen.blit(surf, (item_rect.x + 10, ty))
+
+    def _open_context_menu(self, pos: tuple[int, int], target_id: int) -> None:
+        width = 160
+        item_h = 26
+        pad = 8
+        count = max(1, len(self.context_menu_items))
+        height = pad * 2 + item_h * count
+
+        max_x = max(0, self.scene_width - width)
+        max_y = max(0, self.scene_height - height)
+        x = min(max(0, pos[0]), max_x)
+        y = min(max(0, pos[1]), max_y)
+        rect = pygame.Rect(x, y, width, height)
+
+        item_rects: list[tuple[str, pygame.Rect]] = []
+        item_y = rect.y + pad
+        for key, _ in self.context_menu_items:
+            item_rects.append((key, pygame.Rect(rect.x + 4, item_y, rect.width - 8, item_h)))
+            item_y += item_h
+
+        self.context_menu_rect = rect
+        self.context_menu_item_rects = item_rects
+        self.context_menu_target_id = target_id
+        self.context_menu_hover = None
+        self.context_menu_active = True
+        self.dragging = False
+        self.drag_mode = None
+
+    def _close_context_menu(self) -> None:
+        self.context_menu_active = False
+        self.context_menu_target_id = None
+        self.context_menu_hover = None
+        self.context_menu_item_rects = []
+
+    def _context_menu_hit(self, pos: tuple[int, int]) -> str | None:
+        if not self.context_menu_active or not self.context_menu_rect.collidepoint(pos):
+            return None
+        for key, item_rect in self.context_menu_item_rects:
+            if item_rect.collidepoint(pos):
+                return key
+        return None
+
+    def _context_menu_click(self, app: AppLike, pos: tuple[int, int]) -> bool:
+        key = self._context_menu_hit(pos)
+        if key is None:
+            return False
+        self._perform_context_menu_action(app, key)
+        self._close_context_menu()
+        return True
+
+    def _update_context_menu_hover(self, pos: tuple[int, int]) -> None:
+        if not self.context_menu_active:
+            return
+        self.context_menu_hover = self._context_menu_hit(pos)
+
+    def _perform_context_menu_action(self, app: AppLike, key: str) -> None:
+        if key == "delete" and self.context_menu_target_id is not None:
+            if self.model.selected_id != self.context_menu_target_id:
+                self.model.select_node(self.context_menu_target_id)
+            self._delete_selected()
+
+    def _handle_context_menu_request(self, pos: tuple[int, int]) -> None:
+        target_id: int | None = None
+
+        if self.tree_rect.width > 0 and self.tree_rect.height > 0 and self.tree_rect.collidepoint(pos):
+            target_id = self._tree_node_at(pos)
+            if target_id == self.model.root_id:
+                target_id = None
+            elif target_id is not None:
+                self.model.select_node(target_id)
+        elif self.canvas_rect.collidepoint(pos):
+            scene_pos = self._canvas_point_to_scene(pos, clamp=False)
+            if scene_pos is not None:
+                target_id = self._select_node_at_scene(scene_pos)
+
+        if target_id is None:
+            self._close_context_menu()
+            return
+
+        self._open_context_menu(pos, target_id)
 
     def _render_tree_panel(self, screen: pygame.Surface) -> None:
         rect = self.tree_rect
@@ -380,6 +614,24 @@ class EditorScene(Scene):
             return (mx - vp.x, my - vp.y)
         return (mx, my)
 
+    def _canvas_point_to_scene(self, pos: tuple[int, int], *, clamp: bool = True) -> pygame.Vector2 | None:
+        rect = self.canvas_rect
+        if rect.width <= 0 or rect.height <= 0 or self.canvas_scale <= 0:
+            return None
+        local_x = pos[0] - rect.x
+        local_y = pos[1] - rect.y
+        if not clamp and not rect.collidepoint(pos):
+            return None
+        if clamp:
+            local_x = max(0, min(rect.width, local_x))
+            local_y = max(0, min(rect.height, local_y))
+        # evita divisiones extra si la escala es cero
+        if self.canvas_scale <= 0:
+            return None
+        scene_x = local_x / self.canvas_scale
+        scene_y = local_y / self.canvas_scale
+        return pygame.Vector2(scene_x, scene_y)
+
     def _draw_section_header(self, screen: pygame.Surface, rect: pygame.Rect, title: str) -> None:
         t = self.font.render(title, True, (220, 220, 220))
         screen.blit(t, (rect.x + 10, rect.y + 8))
@@ -439,6 +691,42 @@ class EditorScene(Scene):
         return s if len(s) <= 70 else s[:67] + "..."
 
     # ---------------- VCursor helpers ----------------
+
+    def _load_controller_profile(self) -> None:
+        try:
+            self.controller_profile = ControllerProfile.from_toml(self._controller_cfg_path)
+        except (OSError, ValueError):
+            self.controller_profile = ControllerProfile.default()
+
+        self._vcursor_axes = (
+            self._controller_axis_index("left_x", 0),
+            self._controller_axis_index("left_y", 1),
+        )
+        self._vcursor_primary_buttons = self._controller_button_indices(("a", "b"), (0, 1, 5, 4))
+        self._vcursor_secondary_buttons = self._controller_button_indices(("y", "x"), (3, 2, 6, 7))
+        self.vcursor_deadzone = getattr(self.controller_profile, "deadzone", self.vcursor_deadzone)
+
+    def _controller_button_indices(self, names: tuple[str, ...], fallback: tuple[int, ...]) -> tuple[int, ...]:
+        seen: set[int] = set()
+        result: list[int] = []
+        for name in names:
+            idx = self.controller_profile.button_index(name)
+            if idx is None or idx in seen:
+                continue
+            result.append(idx)
+            seen.add(idx)
+
+        for idx in fallback:
+            if idx in seen:
+                continue
+            result.append(idx)
+            seen.add(idx)
+
+        return tuple(result) if result else (0,)
+
+    def _controller_axis_index(self, name: str, fallback: int) -> int:
+        idx = self.controller_profile.axis_index(name)
+        return idx if idx is not None else fallback
 
     def _sync_vcursor_enabled(self) -> None:
         self._set_vcursor_enabled(self._has_any_joystick())
@@ -504,9 +792,11 @@ class EditorScene(Scene):
 
             # 3) canvas -> select + drag
             if self.canvas_rect.collidepoint(pos):
-                hit = self._select_node_at(pos)
-                if hit is not None:
-                    self._start_drag_existing(pos)
+                scene_pos = self._canvas_point_to_scene(pos, clamp=False)
+                if scene_pos is not None:
+                    hit = self._select_node_at_scene(scene_pos)
+                    if hit is not None:
+                        self._start_drag_existing(scene_pos)
                 return
 
         if ev.type == pygame.MOUSEBUTTONUP and ev.button == 1:
@@ -516,16 +806,16 @@ class EditorScene(Scene):
 
         if ev.type == pygame.MOUSEMOTION and pos is not None:
             if self.dragging:
-                self._drag_to(pos)
+                scene_pos = self._canvas_point_to_scene(pos, clamp=True)
+                self._drag_to_scene(scene_pos)
             return
 
         if ev.type == pygame.JOYAXISMOTION and self.vcursor_enabled:
-            # típico: axis 0 = x, axis 1 = y
-            if ev.axis in (0, 1):
-                # lee ambos ejes del joystick 0 (si quieres algo más general, lo guardas)
-                joy = pygame.joystick.Joystick(0)
-                ax = joy.get_axis(0)
-                ay = joy.get_axis(1)
+            if ev.axis in self._vcursor_axes:
+                joy = pygame.joystick.Joystick(ev.joy)
+                ax_idx, ay_idx = self._vcursor_axes
+                ax = joy.get_axis(ax_idx)
+                ay = joy.get_axis(ay_idx)
 
                 def dz(v: float, dead: float) -> float:
                     return 0.0 if abs(v) < dead else v
@@ -550,11 +840,7 @@ class EditorScene(Scene):
         if ev.type in (pygame.JOYBUTTONDOWN, pygame.JOYBUTTONUP) and self.vcursor_enabled:
             is_down = (ev.type == pygame.JOYBUTTONDOWN)
 
-            # mapping provisional (lo ajustas con tu test)
-            JOY_A = 5
-            JOY_B = 4
-
-            if ev.button == JOY_A:
+            if ev.button in self._vcursor_primary_buttons:
                 self.vcursor_buttons[1] = is_down
                 if is_down:
                     self._pointer_down(app, 1, (int(self.vcursor_pos.x), int(self.vcursor_pos.y)))
@@ -562,7 +848,7 @@ class EditorScene(Scene):
                     self._pointer_up(1, (int(self.vcursor_pos.x), int(self.vcursor_pos.y)))
                 return
 
-            if ev.button == JOY_B:
+            if ev.button in self._vcursor_secondary_buttons:
                 self.vcursor_buttons[3] = is_down
                 if is_down:
                     self._pointer_down(app, 3, (int(self.vcursor_pos.x), int(self.vcursor_pos.y)))
@@ -611,31 +897,41 @@ class EditorScene(Scene):
             return False
         if not self.tree_rect.collidepoint(pos):
             return False
-        for rect, node_id in self._tree_hitboxes:
-            if rect.collidepoint(pos):
-                self.model.select_node(node_id)
-                return True
-        self.model.select_node(None)
+        node_id = self._tree_node_at(pos)
+        if node_id is not None:
+            self.model.select_node(node_id)
+        else:
+            self.model.select_node(None)
         return True
 
-    def _spawn_from_palette(self, target: str, idx: int, mouse_pos: tuple[int, int]) -> None:
-        spawn_pos = pygame.Vector2(mouse_pos)
-        if not self.canvas_rect.collidepoint(mouse_pos):
-            spawn_pos = pygame.Vector2(self.canvas_rect.center)
+    def _tree_node_at(self, pos: tuple[int, int]) -> int | None:
+        if self.tree_rect.width <= 0 or self.tree_rect.height <= 0:
+            return None
+        if not self.tree_rect.collidepoint(pos):
+            return None
+        for rect, node_id in self._tree_hitboxes:
+            if rect.collidepoint(pos):
+                return node_id
+        return None
 
-        node = self.model.spawn_from_palette(target, idx, spawn_pos)
+    def _spawn_from_palette(self, target: str, idx: int, mouse_pos: tuple[int, int]) -> None:
+        spawn_pos_vec = self._canvas_point_to_scene(mouse_pos, clamp=False)
+        if spawn_pos_vec is None:
+            spawn_pos_vec = pygame.Vector2(self.scene_canvas_rect.center)
+
+        node = self.model.spawn_from_palette(target, idx, (int(spawn_pos_vec.x), int(spawn_pos_vec.y)))
         if node is None:
             return
 
         self.drag_mode = "spawn-new"
-        self._start_drag_existing(mouse_pos)
+        self._start_drag_existing(spawn_pos_vec)
 
     # ---------- Select / Drag ----------
 
-    def _select_node_at(self, mouse_pos: tuple[int, int]) -> int | None:
-        return self.model.select_at_position(mouse_pos)
+    def _select_node_at_scene(self, scene_pos: pygame.Vector2) -> int | None:
+        return self.model.select_at_position((int(scene_pos.x), int(scene_pos.y)))
 
-    def _start_drag_existing(self, mouse_pos: tuple[int, int]) -> None:
+    def _start_drag_existing(self, scene_pos: pygame.Vector2) -> None:
         node = self.model.selected_node()
         if node is None or node.payload is None:
             return
@@ -645,16 +941,18 @@ class EditorScene(Scene):
 
         self.dragging = True
         self.drag_mode = self.drag_mode or "move-existing"
-        self.drag_offset = pygame.Vector2(p) - pygame.Vector2(mouse_pos)
+        self.drag_offset = pygame.Vector2(p) - pygame.Vector2(scene_pos)
 
-        self._drag_to(mouse_pos)
+        self._drag_to_scene(scene_pos)
 
-    def _drag_to(self, mouse_pos: tuple[int, int]) -> None:
+    def _drag_to_scene(self, scene_pos: pygame.Vector2 | None) -> None:
+        if scene_pos is None:
+            return
         if self.model.selected_node() is None:
             return
 
-        desired = pygame.Vector2(mouse_pos) + self.drag_offset
-        self.model.move_selected_within(self.canvas_rect, desired)
+        desired = pygame.Vector2(scene_pos) + self.drag_offset
+        self.model.move_selected_within(self.scene_canvas_rect, desired)
 
     def _delete_selected(self) -> None:
         node = self.model.selected_node()
@@ -665,6 +963,7 @@ class EditorScene(Scene):
         self.dragging = False
         self.drag_mode = None
         self._save_composition()
+        self._close_context_menu()
 
     def _selected_label(self) -> str:
         return self.model.selected_label()
@@ -711,7 +1010,7 @@ class EditorScene(Scene):
 
     def _save_composition(self, app: AppLike | None = None) -> bool:
         target = self._composition_output_path()
-        canvas = [self.canvas_rect.width or 640, self.canvas_rect.height or 360]
+        canvas = [self.scene_canvas_rect.width or 640, self.scene_canvas_rect.height or 360]
         try:
             path = self.model.save_composition(
                 target,
@@ -756,12 +1055,19 @@ class EditorScene(Scene):
         print(msg)
 
     def _pointer_down(self, app: AppLike, button: int, pos: tuple[int, int]) -> None:
-        if button != 1:
-            # por ahora, right click no hace nada (o cancela drag / abre menú)
-            if button == 3:
-                self.dragging = False
-                self.drag_mode = None
+        if button == 3:
+            self.dragging = False
+            self.drag_mode = None
+            self._handle_context_menu_request(pos)
             return
+
+        if button != 1:
+            return
+
+        if self.context_menu_active:
+            if self._context_menu_click(app, pos):
+                return
+            self._close_context_menu()
 
         toolbar_hit = self._toolbar_hit(pos)
         if toolbar_hit is not None:
@@ -778,14 +1084,22 @@ class EditorScene(Scene):
             return
 
         if self.canvas_rect.collidepoint(pos):
-            hit2 = self._select_node_at(pos)
+            scene_pos = self._canvas_point_to_scene(pos, clamp=False)
+            if scene_pos is None:
+                return
+            hit2 = self._select_node_at_scene(scene_pos)
             if hit2 is not None:
-                self._start_drag_existing(pos)
+                self._start_drag_existing(scene_pos)
             return
 
     def _pointer_move(self, pos: tuple[int, int]) -> None:
+        if self.context_menu_active:
+            self._update_context_menu_hover(pos)
+            if not self.dragging:
+                return
         if self.dragging:
-            self._drag_to(pos)
+            scene_pos = self._canvas_point_to_scene(pos, clamp=True)
+            self._drag_to_scene(scene_pos)
 
     def _pointer_up(self, button: int, pos: tuple[int, int]) -> None:
         if button == 1:

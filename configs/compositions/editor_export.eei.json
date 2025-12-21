@@ -7,8 +7,8 @@
   },
   "scene": {
     "canvas": [
-      545,
-      644
+      1028,
+      720
     ],
     "origin": [
       0,
@@ -17,14 +17,14 @@
   },
   "nodes": [
     {
-      "id": "env-002",
+      "id": "env-001",
       "kind": "environment",
       "type": "game.environments.black_zone.BlackZone",
       "parent": null,
       "transform": {
         "position": [
-          232.0,
-          510.0
+          97.1412844036697,
+          624.0733944954129
         ]
       },
       "state": {
@@ -32,67 +32,6 @@
           200.0,
           200.0
         ]
-      },
-      "children": [
-        "ent-001",
-        "ent-002",
-        "ent-003"
-      ]
-    },
-    {
-      "id": "ent-001",
-      "kind": "entity",
-      "type": "game.entities.mouth.Mouth",
-      "parent": "env-002",
-      "transform": {
-        "position": [
-          231.0,
-          370.0
-        ]
-      },
-      "state": {
-        "radius": 18,
-        "open_amount": 0.0,
-        "open_speed": 6.0,
-        "talking": false
-      },
-      "children": []
-    },
-    {
-      "id": "ent-002",
-      "kind": "entity",
-      "type": "game.entities.eye.Eye",
-      "parent": "env-002",
-      "transform": {
-        "position": [
-          169.0,
-          333.0
-        ]
-      },
-      "state": {
-        "radius": 22,
-        "blink_duration": 0.12,
-        "blink_timer": 0.0,
-        "blinking": false
-      },
-      "children": []
-    },
-    {
-      "id": "ent-003",
-      "kind": "entity",
-      "type": "game.entities.eye.Eye",
-      "parent": "env-002",
-      "transform": {
-        "position": [
-          292.0,
-          342.0
-        ]
-      },
-      "state": {
-        "radius": 22,
-        "blink_duration": 0.12,
-        "blink_timer": 0.0,
-        "blinking": false
       },
       "children": []
     }

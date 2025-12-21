@@ -8,6 +8,9 @@ import time
 import pygame
 
 from game.scenes.base import Scene
+from game.compositions import load_composition
+from game.input import ControllerProfile, gather_input_actions
+from game.scenes.editor import EditorScene
 
 
 @dataclass
@@ -34,12 +37,20 @@ class InputTesterScene(Scene):
         self.deadzone = 0.20
 
         root = Path(__file__).resolve().parents[2]
+        self._controller_cfg_path = root / "configs" / "controllers" / "generic.toml"
+        self._composition_path = self._default_composition_path(root)
         self._joystick_cfg_path = root / "configs" / "input_tester_joystick.json"
         self._snapshot_dirty = False
         self._snapshot_cooldown = 0.25  # segs entre escrituras en disco
         self._last_snapshot = time.monotonic()
+        self.controller_profile: ControllerProfile | None = None
+        self._action_dictionary: dict[str, list] = {"entities": [], "editor": []}
+        self._action_dictionary_error: str | None = None
 
     def on_enter(self, app) -> None:
+        self._load_controller_profile()
+        self._refresh_action_dictionary()
+
         pygame.joystick.init()
         self._discover_joysticks()
 
@@ -261,12 +272,19 @@ class InputTesterScene(Scene):
 
             y += py(0.01)
 
-            pressed = [i for i in range(info.buttons) if js.get_button(i)]
-            draw_line(f"Pressed buttons: {pressed if pressed else '[]'}", big=False)
+            pressed_idx = [i for i in range(info.buttons) if js.get_button(i)]
+            if pressed_idx:
+                pressed_label = ", ".join(self._controller_button_label(i) for i in pressed_idx)
+            else:
+                pressed_label = "None"
+            draw_line(f"Pressed buttons: {pressed_label}", big=False)
 
             if info.hats:
-                hats = [js.get_hat(i) for i in range(info.hats)]
-                draw_line(f"Hats: {hats}", big=False)
+                hat_parts = []
+                for i in range(info.hats):
+                    value = js.get_hat(i)
+                    hat_parts.append(f"{self._controller_hat_label(i)}={value}")
+                draw_line(f"Hats: {' | '.join(hat_parts)}", big=False)
 
             y += py(0.01)
 
@@ -285,7 +303,7 @@ class InputTesterScene(Scene):
                         v = 0.0
 
                     # label
-                    label = f"Axis {a}: {v:+.3f}"
+                    label = f"{self._controller_axis_label(a)}: {v:+.3f}"
                     surf = self.small.render(label, True, (220, 220, 220))
                     screen.blit(surf, (pad_x, y))
                     y += surf.get_height() + label_gap
@@ -299,25 +317,196 @@ class InputTesterScene(Scene):
                 if info.axes > axes_to_show:
                     draw_line(f"... ({info.axes - axes_to_show} more axes hidden)", big=False)
 
-        # Panel derecho (event log)
-        # Caja relativa para el log
-        log_title = self.small.render("Last events", True, (180, 180, 255))
-        screen.blit(log_title, (right_x, pad_y))
+        dict_gap = py(0.02)
+        dict_height = int(h * 0.45)
+        dict_rect = pygame.Rect(right_x, pad_y, right_w, dict_height)
+        log_rect = pygame.Rect(
+            right_x,
+            dict_rect.bottom + dict_gap,
+            right_w,
+            max(0, h - dict_rect.bottom - dict_gap - pad_y),
+        )
+        self._render_action_dictionary(screen, dict_rect)
+        self._render_event_log(screen, log_rect)
 
-        ly = pad_y + int(log_title.get_height() * 1.4)
-        max_log_h = h - ly - pad_y
+    def _render_action_dictionary(self, screen: pygame.Surface, rect: pygame.Rect) -> None:
+        if rect.width <= 0 or rect.height <= 0:
+            return
 
-        # fondo del panel de log
-        panel_rect = pygame.Rect(right_x, ly - py(0.01), right_w, max_log_h + py(0.01))
-        pygame.draw.rect(screen, (18, 18, 24), panel_rect, border_radius=ps(0.015))
-        pygame.draw.rect(screen, (40, 40, 60), panel_rect, width=1, border_radius=ps(0.015))
+        pygame.draw.rect(screen, (18, 18, 24), rect, border_radius=12)
+        pygame.draw.rect(screen, (40, 40, 60), rect, width=1, border_radius=12)
 
-        # texto log
-        ty = ly
-        line_gap = py(0.004)
+        title = self.small.render("Action Dictionary", True, (180, 180, 255))
+        screen.blit(title, (rect.x + 14, rect.y + 12))
+
+        y = rect.y + 12 + title.get_height() + 6
+        section_gap = 6
+
+        contexts = [
+            ("Entities in scene", self._action_dictionary.get("entities", [])),
+            ("Editor tooling", self._action_dictionary.get("editor", [])),
+        ]
+
+        for ctx_label, actions in contexts:
+            if y > rect.bottom - 30:
+                break
+            header = self.small.render(ctx_label, True, (140, 190, 255))
+            screen.blit(header, (rect.x + 14, y))
+            y += header.get_height() + 4
+
+            if not actions:
+                empty = self.small.render("No bindings detected.", True, (130, 130, 130))
+                screen.blit(empty, (rect.x + 20, y))
+                y += empty.get_height() + section_gap
+                continue
+
+            for action in actions:
+                if y > rect.bottom - 36:
+                    ellipsis = self.small.render("...", True, (200, 200, 200))
+                    screen.blit(ellipsis, (rect.x + 14, y))
+                    return
+                title_line = self.small.render(f"{action.target} · {action.action}", True, (220, 220, 220))
+                screen.blit(title_line, (rect.x + 20, y))
+                y += title_line.get_height() + 2
+
+                bindings_text = ", ".join(self._format_binding(b) for b in action.bindings)
+                bindings_line = self.small.render(bindings_text, True, (180, 180, 180))
+                screen.blit(bindings_line, (rect.x + 32, y))
+                y += bindings_line.get_height() + section_gap
+
+        if self._action_dictionary_error:
+            err = self.small.render(self._action_dictionary_error, True, (220, 130, 130))
+            screen.blit(err, (rect.x + 14, rect.bottom - err.get_height() - 6))
+
+    def _render_event_log(self, screen: pygame.Surface, rect: pygame.Rect) -> None:
+        if rect.width <= 0 or rect.height <= 0:
+            return
+
+        pygame.draw.rect(screen, (18, 18, 24), rect, border_radius=12)
+        pygame.draw.rect(screen, (40, 40, 60), rect, width=1, border_radius=12)
+
+        title = self.small.render("Last events", True, (180, 180, 255))
+        screen.blit(title, (rect.x + 14, rect.y + 12))
+
+        ty = rect.y + 12 + title.get_height() + 6
+        line_gap = 4
         for msg in self.events:
             surf = self.small.render(msg, True, (200, 200, 200))
-            screen.blit(surf, (right_x + px(0.01), ty))
+            screen.blit(surf, (rect.x + 18, ty))
             ty += surf.get_height() + line_gap
-            if ty > panel_rect.bottom - py(0.02):
+            if ty > rect.bottom - 10:
                 break
+
+    def _load_controller_profile(self) -> None:
+        if not self._controller_cfg_path.exists():
+            self.controller_profile = ControllerProfile.default()
+            self.deadzone = self.controller_profile.deadzone
+            return
+
+        try:
+            self.controller_profile = ControllerProfile.from_toml(self._controller_cfg_path)
+        except (OSError, ValueError) as exc:
+            self._push(f"No se pudo leer controller profile: {exc}")
+            self.controller_profile = ControllerProfile.default()
+        self.deadzone = self.controller_profile.deadzone
+
+    def _refresh_action_dictionary(self) -> None:
+        contexts: dict[str, list] = {"entities": [], "editor": []}
+        try:
+            contexts["editor"] = gather_input_actions(EditorScene, context="editor", default_target="Editor")
+        except Exception as exc:
+            self._action_dictionary_error = f"Editor bindings invalid: {exc}"
+            self._action_dictionary = contexts
+            return
+
+        if self._composition_path is None:
+            self._action_dictionary_error = "No composition detected for entity lookup."
+            self._action_dictionary = contexts
+            return
+
+        try:
+            runtime = load_composition(self._composition_path)
+        except Exception as exc:
+            self._action_dictionary_error = f"Composition load failed: {exc}"
+            self._action_dictionary = contexts
+            return
+
+        for node in runtime.iter_nodes("entity"):
+            try:
+                actions = gather_input_actions(
+                    node.instance,
+                    context="entity",
+                    default_target=getattr(node.instance, "__class__", type(node.instance)).__name__,
+                )
+            except Exception as exc:
+                self._push(f"Input metadata error in {node.id}: {exc}")
+                continue
+            contexts["entities"].extend(actions)
+
+        self._action_dictionary = contexts
+        self._action_dictionary_error = None
+
+    def _controller_button_label(self, control: str | int) -> str:
+        if self.controller_profile:
+            return self.controller_profile.button_label(control)
+        if isinstance(control, int):
+            return f"Button {control}"
+        return control
+
+    def _controller_axis_label(self, control: str | int) -> str:
+        if self.controller_profile:
+            return self.controller_profile.axis_label(control)
+        if isinstance(control, int):
+            return f"Axis {control}"
+        return control
+
+    def _controller_hat_label(self, control: str | int) -> str:
+        if self.controller_profile:
+            return self.controller_profile.hat_label(control)
+        if isinstance(control, int):
+            return f"Hat {control}"
+        return control
+
+    def _format_binding(self, binding) -> str:
+        if binding.label:
+            base = binding.label
+        elif binding.device == "keyboard":
+            base = self._key_label(binding.control)
+        elif binding.device == "mouse":
+            base = self._mouse_label(binding.control)
+        elif binding.device == "joystick_button":
+            base = self._controller_button_label(binding.control)
+        elif binding.device == "joystick_axis":
+            base = self._controller_axis_label(binding.control)
+        elif binding.device == "joystick_hat":
+            base = self._controller_hat_label(binding.control)
+        else:
+            base = binding.control
+
+        if binding.modifiers:
+            mods = "+".join(binding.modifiers)
+            return f"{mods}+{base}"
+        return base
+
+    def _key_label(self, control: str) -> str:
+        attr_name = control.upper()
+        keycode = getattr(pygame, attr_name, None)
+        if isinstance(keycode, int):
+            return pygame.key.name(keycode).replace("_", " ").title()
+        return control
+
+    def _mouse_label(self, control: str) -> str:
+        mapping = {
+            "button1": "Left Click",
+            "button2": "Middle Click",
+            "button3": "Right Click",
+        }
+        return mapping.get(control.lower(), control.title())
+
+    def _default_composition_path(self, root: Path) -> Path | None:
+        comps = root / "configs" / "compositions"
+        for candidate in ("editor_export.eei.json", "demo_face.eei.json"):
+            cand_path = comps / candidate
+            if cand_path.exists():
+                return cand_path
+        return None

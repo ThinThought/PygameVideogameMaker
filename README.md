@@ -168,6 +168,10 @@ En este archivo se especifica, entre otros:
 👉 **No hardcodees resolución ni FPS en el código**.
 Cualquier ajuste de pantalla debe hacerse aquí para garantizar portabilidad entre PC y consolas.
 
+### Controladores e Input
+
+Los mandos físicos se describen ahora en `configs/controllers/generic.toml` mediante TOML. Cada entrada especifica ejes, botones y hats por nombre (`left_x`, `a`, `dpad`, etc). El editor y el `InputTester` usan este perfil para asociar los índices reales del joystick a acciones concretas, por lo que basta con ajustar este archivo para adaptar la plantilla a otro gamepad sin tocar código. Puedes duplicarlo y crear variaciones si necesitas varios perfiles.
+
 ---
 
 ## Dependencias y vendor bundle

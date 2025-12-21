@@ -1,8 +1,19 @@
 import pygame
 from game.entities.base import Entity, AppLike
+from game.input import ActionBinding, InputBinding
 
 
 class Eye(Entity):
+    INPUT_ACTIONS = [
+        ActionBinding(
+            action="Blink",
+            description="Parpadea mientras se mantenga pulsada la barra espaciadora.",
+            bindings=(
+                InputBinding(device="keyboard", control="K_SPACE", label="Space"),
+            ),
+        ),
+    ]
+
     def __init__(self, pos):
         self.pos = pygame.Vector2(pos)
         self.radius = 22
