@@ -178,12 +178,6 @@ class App:
                         self.prev_scene()
                         continue
 
-                    # Direct jump 1..9
-                    if pygame.K_1 <= ev.key <= pygame.K_9:
-                        idx = ev.key - pygame.K_1
-                        if idx < len(self.scenes):
-                            self.set_scene(idx)
-                            continue
 
                 if ev.type == pygame.JOYBUTTONDOWN:
                     self.joy_buttons_down.add(ev.button)
@@ -246,7 +240,7 @@ class App:
 
         left_text = f"{self.scene.__class__.__name__}  [{self._scene_index + 1}/{len(self.scenes)}]"
         center_text = f"FPS {fps:0.1f}   dt {dt * 1000:0.1f} ms"
-        right_text = self._toast_text or "F1/F2  TAB / SHIFT+TAB  1..9"
+        right_text = self._toast_text or "F1/F2  TAB / SHIFT+TAB"
 
         pad_x = 12
         y = bar_y + (bar_h - self.hud_font.get_height()) // 2

@@ -11,6 +11,8 @@ class MainScene(Scene):
         self.runtime: CompositionRuntime | None = None
         self._ordered_nodes: list = []
         self.composition_path: Path | None = self._resolve_composition_path(composition_path)
+        self._render_surface: pygame.Surface | None = None
+        self._render_surface_size: tuple[int, int] | None = None
 
     def on_enter(self, app: AppLike) -> None:
         self._load_composition(app)
@@ -32,11 +34,28 @@ class MainScene(Scene):
 
     def render(self, app: AppLike, screen: pygame.Surface) -> None:
         screen.fill("white")
+        runtime = self.runtime
+        if runtime is None:
+            return
+
+        target_size = runtime.canvas_size if runtime.canvas_size else screen.get_size()
+        render_surface = self._ensure_render_surface(target_size)
+        render_surface.fill("white")
 
         for node in self._iter_runtime_nodes():
             renderer = getattr(node.instance, "render", None)
             if callable(renderer):
-                renderer(app, screen)
+                renderer(app, render_surface)
+
+        canvas_rect = self._fit_canvas(screen.get_size(), render_surface.get_size())
+        if canvas_rect.width <= 0 or canvas_rect.height <= 0:
+            return
+
+        if canvas_rect.size == render_surface.get_size():
+            screen.blit(render_surface, canvas_rect.topleft)
+        else:
+            scaled = pygame.transform.smoothscale(render_surface, canvas_rect.size)
+            screen.blit(scaled, canvas_rect.topleft)
 
     # ---------- Composition helpers ----------
 
@@ -44,6 +63,8 @@ class MainScene(Scene):
         if self.composition_path is None:
             self.runtime = None
             self._ordered_nodes = []
+            self._render_surface = None
+            self._render_surface_size = None
             return
 
         try:
@@ -52,6 +73,8 @@ class MainScene(Scene):
             print(f"[MainScene] Composición no encontrada: {self.composition_path}")
             self.runtime = None
             self._ordered_nodes = []
+            self._render_surface = None
+            self._render_surface_size = None
             return
 
         self._ordered_nodes = list(self.runtime.iter_nodes())
@@ -59,6 +82,8 @@ class MainScene(Scene):
             on_spawn = getattr(node.instance, "on_spawn", None)
             if callable(on_spawn):
                 on_spawn(app)
+        self._render_surface = None
+        self._render_surface_size = None
 
     def _teardown_nodes(self, app: AppLike) -> None:
         for node in reversed(self._ordered_nodes):
@@ -67,6 +92,8 @@ class MainScene(Scene):
                 on_despawn(app)
         self._ordered_nodes = []
         self.runtime = None
+        self._render_surface = None
+        self._render_surface_size = None
 
     def _iter_runtime_nodes(self):
         return self._ordered_nodes
@@ -84,3 +111,26 @@ class MainScene(Scene):
             candidate = Path(provided)
             return candidate if candidate.exists() else None
         return self._default_composition_path()
+
+    def _ensure_render_surface(self, size: tuple[int, int]) -> pygame.Surface:
+        w = max(1, int(size[0] or 0))
+        h = max(1, int(size[1] or 0))
+        dims = (w, h)
+        if self._render_surface is None or self._render_surface_size != dims:
+            self._render_surface = pygame.Surface(dims).convert()
+            self._render_surface_size = dims
+        return self._render_surface
+
+    def _fit_canvas(self, viewport_size: tuple[int, int], canvas_size: tuple[int, int]) -> pygame.Rect:
+        vw, vh = viewport_size
+        cw, ch = canvas_size
+        if vw <= 0 or vh <= 0 or cw <= 0 or ch <= 0:
+            return pygame.Rect(0, 0, 0, 0)
+        scale = min(1.0, vw / cw, vh / ch)
+        if scale <= 0:
+            return pygame.Rect(0, 0, 0, 0)
+        scaled_w = max(1, int(round(cw * scale)))
+        scaled_h = max(1, int(round(ch * scale)))
+        offset_x = (vw - scaled_w) // 2
+        offset_y = (vh - scaled_h) // 2
+        return pygame.Rect(offset_x, offset_y, scaled_w, scaled_h)

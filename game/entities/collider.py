@@ -26,12 +26,14 @@ class ColliderEntity(Entity):
         pos: pygame.Vector2 | tuple[float, float] | None = None,
         *,
         size: pygame.Vector2 | tuple[float, float] | None = None,
+        collider_offset: pygame.Vector2 | tuple[float, float] | None = None,
         visible: bool = False,
         debug_outline_color: pygame.Color | str | tuple[int, int, int] = (40, 146, 255),
         debug_fill_color: pygame.Color | str | tuple[int, int, int, int] = (40, 146, 255, 60),
     ) -> None:
         self.pos = pygame.Vector2(pos) if pos is not None else pygame.Vector2(0, 0)
         self.size = self._coerce_size(size)
+        self._collider_offset = self._coerce_offset(collider_offset)
 
         self.visible = bool(visible)
         self._debug_outline_color = pygame.Color(0, 0, 0)
@@ -97,7 +99,8 @@ class ColliderEntity(Entity):
     def rect(self) -> pygame.Rect:
         """Devuelve el rectángulo base del collider (en píxeles)."""
         half = self.size * 0.5
-        top_left = self.pos - half
+        center = self.pos + self._collider_offset
+        top_left = center - half
         width = max(1, int(round(self.size.x)))
         height = max(1, int(round(self.size.y)))
         return pygame.Rect(int(round(top_left.x)), int(round(top_left.y)), width, height)
@@ -123,6 +126,16 @@ class ColliderEntity(Entity):
         """
         if self._space:
             self._space.revalidate(self)
+
+    # ------------------------------------------------------------------
+    @property
+    def collider_offset(self) -> pygame.Vector2:
+        return pygame.Vector2(self._collider_offset)
+
+    @collider_offset.setter
+    def collider_offset(self, value: pygame.Vector2 | tuple[float, float]) -> None:
+        self._collider_offset = self._coerce_offset(value)
+        self.notify_bounds_changed()
 
     # ------------------------------------------------------------------
     def _ensure_space(self, app: AppLike) -> None:
@@ -178,6 +191,14 @@ class ColliderEntity(Entity):
         return dims
 
     @staticmethod
+    def _coerce_offset(offset: pygame.Vector2 | tuple[float, float] | None) -> pygame.Vector2:
+        if isinstance(offset, pygame.Vector2):
+            return pygame.Vector2(offset)
+        if isinstance(offset, (tuple, list)) and len(offset) == 2:
+            return pygame.Vector2(float(offset[0]), float(offset[1]))
+        return pygame.Vector2(0.0, 0.0)
+
+    @staticmethod
     def _to_color(value, fallback: tuple[int, int, int] | tuple[int, int, int, int]) -> pygame.Color:
         try:
             if isinstance(value, pygame.Color):
@@ -230,6 +251,7 @@ class Platform(ColliderEntity):
         pos: pygame.Vector2 | tuple[float, float] | None = None,
         *,
         size: pygame.Vector2 | tuple[float, float] | None = None,
+        collider_offset: pygame.Vector2 | tuple[float, float] | None = None,
         friction: float = 0.85,
         grip: float = 1.0,
         visible: bool = False,
@@ -237,6 +259,7 @@ class Platform(ColliderEntity):
         super().__init__(
             pos,
             size=size if size is not None else (200, 24),
+            collider_offset=collider_offset,
             visible=visible,
             debug_outline_color=(32, 170, 116),
             debug_fill_color=(32, 170, 116, 70),

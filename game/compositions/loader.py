@@ -26,6 +26,8 @@ class CompositionRuntime:
     nodes: dict[str, CompositionNode]
     ordered_ids: list[str]
     interactions: list[dict[str, Any]]
+    canvas_size: tuple[int, int]
+    origin: pygame.Vector2
 
     def iter_nodes(self, kind: NodeKind | None = None) -> Iterator[CompositionNode]:
         for node_id in self._iter_tree_ids():
@@ -53,6 +55,8 @@ class CompositionRuntime:
 def load_composition(path: str | Path) -> CompositionRuntime:
     file_path = Path(path)
     data = json.loads(file_path.read_text(encoding="utf-8"))
+
+    canvas_size, origin = _parse_scene_block(data.get("scene"))
 
     version = int(data.get("version", 0))
     if version != 1:
@@ -101,7 +105,13 @@ def load_composition(path: str | Path) -> CompositionRuntime:
     if not isinstance(interactions, list):
         raise ValueError("interactions must be a list")
 
-    return CompositionRuntime(nodes=nodes, ordered_ids=ordered_ids, interactions=interactions)
+    return CompositionRuntime(
+        nodes=nodes,
+        ordered_ids=ordered_ids,
+        interactions=interactions,
+        canvas_size=canvas_size,
+        origin=origin,
+    )
 
 
 def _instantiate_type(type_path: str, transform: dict[str, Any], state: dict[str, Any]) -> Any:
@@ -205,6 +215,25 @@ def _coerce_state_value(value: Any, current: Any) -> Any:
         if vec is not None and current is None:
             return vec
     return value
+
+
+def _parse_scene_block(raw_scene: Any) -> tuple[tuple[int, int], pygame.Vector2]:
+    scene = raw_scene if isinstance(raw_scene, dict) else {}
+    canvas = _parse_canvas_size(scene.get("canvas"))
+    origin_vec = _vector_from(scene.get("origin"))
+    if origin_vec is None:
+        origin_vec = pygame.Vector2(0, 0)
+    return canvas, origin_vec
+
+
+def _parse_canvas_size(raw: Any) -> tuple[int, int]:
+    if isinstance(raw, (list, tuple)) and len(raw) == 2:
+        w, h = raw
+        if isinstance(w, (int, float)) and isinstance(h, (int, float)):
+            width = max(1, int(round(w)))
+            height = max(1, int(round(h)))
+            return width, height
+    return 1028, 720
 
 
 def _vector_from(raw: Any) -> pygame.Vector2 | None:

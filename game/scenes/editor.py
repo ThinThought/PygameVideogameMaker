@@ -20,6 +20,7 @@ class AttrEntry:
     editable: bool = False
     attr_name: str | None = None
     raw_value: Any = None
+    component: str | None = None
 
 
 class EditorScene(Scene):
@@ -118,6 +119,7 @@ class EditorScene(Scene):
         self.attr_input = ""
         self._attr_edit_attr: str | None = None
         self._attr_edit_node_id: int | None = None
+        self._attr_edit_component: str | None = None
         self._attr_edit_raw_value: Any = None
         self._last_attr_node_id: int | None = None
 
@@ -1028,11 +1030,31 @@ class EditorScene(Scene):
             if k.startswith("_"):
                 continue
             value = d[k]
+            if isinstance(value, pygame.Vector2):
+                items.extend(self._vector_attr_entries(k, value))
+                continue
             editable = self._attr_supports_edit(value)
             attr_name = k if editable else None
             raw_value = value if editable else None
             items.append(AttrEntry(k, self._safe_repr(value), editable=editable, attr_name=attr_name, raw_value=raw_value))
         return items
+
+    def _vector_attr_entries(self, name: str, vec: pygame.Vector2) -> list[AttrEntry]:
+        entries = [AttrEntry(name, self._safe_repr(vec))]
+        for axis in ("x", "y"):
+            comp_label = f"{name}.{axis}"
+            comp_value = float(getattr(vec, axis))
+            entries.append(
+                AttrEntry(
+                    comp_label,
+                    self._safe_repr(comp_value),
+                    editable=True,
+                    attr_name=name,
+                    raw_value=comp_value,
+                    component=axis,
+                )
+            )
+        return entries
 
     def _safe_repr(self, v) -> str:
         try:
@@ -1097,6 +1119,7 @@ class EditorScene(Scene):
         self._attr_edit_attr = entry.attr_name
         self._attr_edit_node_id = node.id
         self._attr_edit_raw_value = entry.raw_value
+        self._attr_edit_component = entry.component
         pygame.key.start_text_input()
 
     def _cancel_attr_edit(self) -> None:
@@ -1107,6 +1130,7 @@ class EditorScene(Scene):
         self._attr_edit_attr = None
         self._attr_edit_node_id = None
         self._attr_edit_raw_value = None
+        self._attr_edit_component = None
 
     def _commit_attr_edit(self) -> None:
         if not self.attr_editing or self._attr_edit_attr is None or self._attr_edit_node_id is None:
@@ -1118,7 +1142,10 @@ class EditorScene(Scene):
             return
 
         current_value = getattr(node.payload, self._attr_edit_attr, None)
-        original_value = current_value
+        if self._attr_edit_component is not None and isinstance(current_value, pygame.Vector2):
+            original_value = getattr(current_value, self._attr_edit_component, self._attr_edit_raw_value)
+        else:
+            original_value = current_value
         if original_value is None and self._attr_edit_raw_value is not None:
             original_value = self._attr_edit_raw_value
         success, parsed = self._parse_attr_input(original_value, self.attr_input)
@@ -1127,7 +1154,12 @@ class EditorScene(Scene):
             self._cancel_attr_edit()
             return
 
-        setattr(node.payload, self._attr_edit_attr, parsed)
+        if self._attr_edit_component is None:
+            setattr(node.payload, self._attr_edit_attr, parsed)
+        else:
+            vec = pygame.Vector2(current_value) if current_value is not None else pygame.Vector2(0, 0)
+            setattr(vec, self._attr_edit_component, float(parsed))
+            setattr(node.payload, self._attr_edit_attr, vec)
         self._cancel_attr_edit()
 
     def _format_attr_value(self, value: Any) -> str:
