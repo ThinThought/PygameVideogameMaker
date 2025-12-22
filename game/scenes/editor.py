@@ -150,6 +150,8 @@ class EditorScene(Scene):
         self.context_menu_items: list[tuple[str, str]] = [("delete", "Delete")]
         self.context_menu_target_id: int | None = None
         self.context_menu_hover: str | None = None
+        self.context_menu_stage: str = "root"
+        self.context_menu_stage_data: dict[str, Any] = {}
         root = Path(__file__).resolve().parents[2]
         self._controller_cfg_path = root / "configs" / "controllers" / "generic.toml"
         self.controller_profile = ControllerProfile.default()
@@ -569,29 +571,11 @@ class EditorScene(Scene):
             screen.blit(surf, (item_rect.x + 10, ty))
 
     def _open_context_menu(self, pos: tuple[int, int], target_id: int) -> None:
-        width = 160
-        item_h = 26
-        pad = 8
-        count = max(1, len(self.context_menu_items))
-        height = pad * 2 + item_h * count
-
-        max_x = max(0, self.scene_width - width)
-        max_y = max(0, self.scene_height - height)
-        x = min(max(0, pos[0]), max_x)
-        y = min(max(0, pos[1]), max_y)
-        rect = pygame.Rect(x, y, width, height)
-
-        item_rects: list[tuple[str, pygame.Rect]] = []
-        item_y = rect.y + pad
-        for key, _ in self.context_menu_items:
-            item_rects.append((key, pygame.Rect(rect.x + 4, item_y, rect.width - 8, item_h)))
-            item_y += item_h
-
-        self.context_menu_rect = rect
-        self.context_menu_item_rects = item_rects
         self.context_menu_target_id = target_id
-        self.context_menu_hover = None
+        self._set_context_menu_stage("root")
+        self._layout_context_menu(pos)
         self.context_menu_active = True
+        self.context_menu_hover = None
         self.dragging = False
         self.drag_mode = None
 
@@ -600,6 +584,8 @@ class EditorScene(Scene):
         self.context_menu_target_id = None
         self.context_menu_hover = None
         self.context_menu_item_rects = []
+        self.context_menu_stage = "root"
+        self.context_menu_stage_data = {}
 
     def _context_menu_hit(self, pos: tuple[int, int]) -> str | None:
         if not self.context_menu_active or not self.context_menu_rect.collidepoint(pos):
@@ -613,8 +599,9 @@ class EditorScene(Scene):
         key = self._context_menu_hit(pos)
         if key is None:
             return False
-        self._perform_context_menu_action(app, key)
-        self._close_context_menu()
+        should_close = self._perform_context_menu_action(app, key)
+        if should_close:
+            self._close_context_menu()
         return True
 
     def _update_context_menu_hover(self, pos: tuple[int, int]) -> None:
@@ -622,11 +609,181 @@ class EditorScene(Scene):
             return
         self.context_menu_hover = self._context_menu_hit(pos)
 
-    def _perform_context_menu_action(self, app: AppLike, key: str) -> None:
-        if key == "delete" and self.context_menu_target_id is not None:
-            if self.model.selected_id != self.context_menu_target_id:
-                self.model.select_node(self.context_menu_target_id)
-            self._delete_selected()
+    def _perform_context_menu_action(self, app: AppLike, key: str) -> bool:
+        target_id = self.context_menu_target_id
+        if target_id is None:
+            return True
+
+        if key == "noop":
+            return False
+
+        if key == "back":
+            if self.context_menu_stage == "choose-kind":
+                self._set_context_menu_stage("root")
+            elif self.context_menu_stage == "choose-item":
+                before = self.context_menu_stage_data.get("before")
+                self._set_context_menu_stage("choose-kind", before=before)
+            self._layout_context_menu()
+            return False
+
+        if self.context_menu_stage == "root":
+            if key == "delete":
+                if self.model.selected_id != target_id:
+                    self.model.select_node(target_id)
+                self._delete_selected()
+                return True
+            if key in {"add-before", "add-after"}:
+                before = key == "add-before"
+                if not self._context_menu_allowed_kinds(target_id):
+                    return False
+                self._set_context_menu_stage("choose-kind", before=before)
+                self._layout_context_menu()
+            return False
+
+        if self.context_menu_stage == "choose-kind":
+            if not key.startswith("kind-"):
+                return False
+            kind = key.split("-", 1)[1]
+            if kind not in self._context_menu_allowed_kinds(target_id):
+                return False
+            before = bool(self.context_menu_stage_data.get("before"))
+            self._set_context_menu_stage("choose-item", before=before, kind=kind)
+            self._layout_context_menu()
+            return False
+
+        if self.context_menu_stage == "choose-item":
+            if not key.startswith("item-"):
+                return False
+            try:
+                idx = int(key.split("-", 1)[1])
+            except ValueError:
+                return False
+            kind = self.context_menu_stage_data.get("kind")
+            if kind not in {"entity", "environment"}:
+                return False
+            before = bool(self.context_menu_stage_data.get("before"))
+            if self._context_menu_spawn_relative(kind, idx, before=before):
+                return True
+            return False
+
+        return False
+
+    def _set_context_menu_stage(
+        self,
+        stage: str,
+        *,
+        before: bool | None = None,
+        kind: str | None = None,
+    ) -> None:
+        data: dict[str, Any] = {}
+        if before is not None:
+            data["before"] = before
+        if kind is not None:
+            data["kind"] = kind
+        self.context_menu_stage = stage
+        self.context_menu_stage_data = data
+        if stage == "root":
+            items = self._context_menu_root_items()
+        elif stage == "choose-kind":
+            items = self._context_menu_kind_items()
+        elif stage == "choose-item":
+            items = self._context_menu_palette_items(kind)
+        else:
+            items = []
+        if not items:
+            items = [("noop", "No actions")]
+        self.context_menu_items = items
+
+    def _layout_context_menu(self, pos: tuple[int, int] | None = None) -> None:
+        width = 200
+        item_h = 26
+        pad = 8
+        count = max(1, len(self.context_menu_items))
+        height = pad * 2 + item_h * count
+
+        if pos is None:
+            x, y = self.context_menu_rect.x, self.context_menu_rect.y
+        else:
+            x, y = pos
+
+        max_x = max(0, self.scene_width - width)
+        max_y = max(0, self.scene_height - height)
+        x = min(max(0, x), max_x)
+        y = min(max(0, y), max_y)
+        rect = pygame.Rect(x, y, width, height)
+
+        item_rects: list[tuple[str, pygame.Rect]] = []
+        item_y = rect.y + pad
+        for key, _ in self.context_menu_items:
+            item_rects.append((key, pygame.Rect(rect.x + 4, item_y, rect.width - 8, item_h)))
+            item_y += item_h
+
+        self.context_menu_rect = rect
+        self.context_menu_item_rects = item_rects
+        self.context_menu_hover = None
+
+    def _context_menu_root_items(self) -> list[tuple[str, str]]:
+        items: list[tuple[str, str]] = []
+        allowed = self._context_menu_allowed_kinds(self.context_menu_target_id)
+        if allowed:
+            items.append(("add-before", "Add Before..."))
+            items.append(("add-after", "Add After..."))
+        items.append(("delete", "Delete"))
+        return items
+
+    def _context_menu_kind_items(self) -> list[tuple[str, str]]:
+        items: list[tuple[str, str]] = [("back", "← Back")]
+        allowed = self._context_menu_allowed_kinds(self.context_menu_target_id)
+        labels = {"entity": "Entities", "environment": "Environments"}
+        for kind in allowed:
+            items.append((f"kind-{kind}", labels.get(kind, kind.title())))
+        return items
+
+    def _context_menu_palette_items(self, kind: str | None) -> list[tuple[str, str]]:
+        items: list[tuple[str, str]] = [("back", "← Back")]
+        if kind == "entity":
+            collection = self.registry.entities
+        elif kind == "environment":
+            collection = self.registry.environments
+        else:
+            collection = []
+        for idx, entry in enumerate(collection):
+            items.append((f"item-{idx}", entry.name))
+        return items
+
+    def _context_menu_allowed_kinds(self, target_id: int | None) -> list[str]:
+        allowed: list[str] = []
+        if target_id is None:
+            return allowed
+        for kind in ("entity", "environment"):
+            if self.model.can_add_sibling(target_id, kind):
+                allowed.append(kind)
+        return allowed
+
+    def _context_menu_spawn_relative(self, kind: str, idx: int, *, before: bool) -> bool:
+        target_id = self.context_menu_target_id
+        if target_id is None:
+            return False
+        if kind not in self._context_menu_allowed_kinds(target_id):
+            return False
+        reference = self.model.node_by_id(target_id)
+        if reference is None:
+            return False
+        pos = reference.position()
+        if pos is None:
+            pos = pygame.Vector2(self.scene_canvas_rect.center)
+        new_node = self.model.spawn_from_palette_relative(
+            kind,
+            idx,
+            (int(pos.x), int(pos.y)),
+            target_id,
+            before=before,
+        )
+        if new_node is None:
+            self._print_status("[Editor] No pude insertar el elemento.")
+            return False
+        self._save_composition()
+        return True
 
     def _handle_context_menu_request(self, pos: tuple[int, int]) -> None:
         target_id: int | None = None

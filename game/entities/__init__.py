@@ -1,11 +1,21 @@
 
-from .eye import Eye
-from .mouth import Mouth
 from .mass import MassEntity
 from .visible_mass import VisibleMassEntity
+from .collider import ColliderEntity, Platform
+from .platforms import (
+    SpritePlatform,
+    GrassSmallPlatform,
+    GrassWidePlatform,
+    GrassLargePlatform,
+    GrassFloorPlatform,
+)
+from .void import VoidEntity
+
 __all__ = [
-    "Eye",
-    "Mouth",
-    "MassEntity",
     "VisibleMassEntity",
+    "GrassSmallPlatform",
+    "GrassWidePlatform",
+    "GrassLargePlatform",
+    "GrassFloorPlatform",
+    "VoidEntity",
 ]

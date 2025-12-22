@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import math
-from typing import ClassVar
+from typing import ClassVar, Iterator
 
 import pygame
 
 from game.entities.base import AppLike
 from game.entities.mass import MassEntity
+from game.entities.collider import Platform
 
 
 class VisibleMassEntity(MassEntity):
@@ -23,8 +23,7 @@ class VisibleMassEntity(MassEntity):
         color: pygame.Color | str | tuple[int, int, int] = (76, 139, 245),
         outline_color: pygame.Color | str | tuple[int, int, int] = (18, 44, 92),
         label_color: pygame.Color | str | tuple[int, int, int] = (255, 255, 255),
-        min_radius: float = 8.0,
-        radius_scale: float = 12.0,
+        size: float = 32.0,
         show_velocity: bool = True,
         show_label: bool = True,
     ) -> None:
@@ -35,40 +34,152 @@ class VisibleMassEntity(MassEntity):
         self.outline_color = self._to_color(outline_color, fallback=(18, 44, 92))
         self.label_color = self._to_color(label_color, fallback=(255, 255, 255))
 
-        self.min_radius = max(1.0, float(min_radius))
-        self.radius_scale = max(0.0, float(radius_scale))
+        self.size = max(4.0, float(size))
         self.show_velocity = bool(show_velocity)
         self.show_label = bool(show_label)
 
+        self._runtime = None
+        self._node_id: str | None = None
+        self._environment_id: str | None = None
+        self._prev_pos = pygame.Vector2(self.pos)
+        self.grounded = False
+
+    # ------------------------------------------------------------------
+    def on_spawn(self, app: AppLike) -> None:
+        self._bind_runtime(app)
+
+    def on_despawn(self, app: AppLike) -> None:
+        self._runtime = None
+        self._node_id = None
+        self._environment_id = None
+
+    def update(self, app: AppLike, dt: float) -> None:
+        self._bind_runtime(app)
+        self.grounded = False
+        self._apply_platform_collisions()
+
+    def integrate(self, dt: float) -> None:
+        self._prev_pos = pygame.Vector2(self.pos)
+        super().integrate(dt)
+
     # ------------------------------------------------------------------
     def render(self, app: AppLike, screen: pygame.Surface) -> None:
-        center = (int(self.pos.x), int(self.pos.y))
-        radius = self._compute_radius()
+        rect = self._cube_rect()
+        center = rect.center
 
         # Blindaje: si alguien pisó self.color con un str, lo re-coercemos aquí.
         fill = self._to_color(getattr(self, "color", (76, 139, 245)), fallback=(76, 139, 245))
         outline = self._to_color(getattr(self, "outline_color", (18, 44, 92)), fallback=(18, 44, 92))
 
-        pygame.draw.circle(screen, fill, center, radius)
-        pygame.draw.circle(screen, outline, center, radius, 2)
+        pygame.draw.rect(screen, fill, rect, border_radius=4)
+        pygame.draw.rect(screen, outline, rect, width=2, border_radius=4)
 
         if self.show_velocity:
-            self._draw_velocity(screen, center, radius, outline)
+            self._draw_velocity(screen, center, outline)
 
         if self.show_label:
             self._draw_mass_label(app, screen, center)
 
     # ------------------------------------------------------------------
-    def _compute_radius(self) -> int:
-        scaled = math.sqrt(max(float(self.mass), self._MIN_MASS))
-        radius = self.min_radius + scaled * self.radius_scale
-        return max(1, int(radius))
+    def _apply_platform_collisions(self) -> None:
+        runtime = self._runtime
+        env_id = self._environment_id
+
+        if runtime is None or env_id is None:
+            return
+
+        platforms = list(self._iter_sibling_platforms())
+        if not platforms:
+            return
+
+        cube = self._cube_rect()
+        prev_cube = self._cube_rect(self._prev_pos)
+
+        for platform in platforms:
+            surface = pygame.Rect(platform.surface_rect())
+            if not cube.colliderect(surface):
+                continue
+
+            curr_bottom = cube.bottom
+            curr_top = cube.top
+            prev_bottom = prev_cube.bottom
+            prev_top = prev_cube.top
+
+            if prev_bottom <= surface.top <= curr_bottom:
+                self.pos.y = surface.top - self._half_size()
+                cube = self._cube_rect()
+                if self.velocity.y > 0:
+                    self.velocity.y = 0
+                    self.grounded = True
+                continue
+
+            if prev_top >= surface.bottom >= curr_top:
+                self.pos.y = surface.bottom + self._half_size()
+                cube = self._cube_rect()
+                if self.velocity.y < 0:
+                    self.velocity.y = 0
+                    self.grounded = True
+
+    def _iter_sibling_platforms(self) -> Iterator[Platform]:
+        runtime = self._runtime
+        env_id = self._environment_id
+        if runtime is None or env_id is None:
+            return iter(())
+
+        node = runtime.nodes.get(env_id)
+        if node is None:
+            return iter(())
+
+        def _gen() -> Iterator[Platform]:
+            for child_id in node.children:
+                if child_id == self._node_id:
+                    continue
+                child_node = runtime.nodes.get(child_id)
+                if child_node is None:
+                    continue
+                instance = getattr(child_node, "instance", None)
+                if isinstance(instance, Platform):
+                    yield instance
+
+        return _gen()
+
+    def _bind_runtime(self, app: AppLike) -> None:
+        scene = getattr(app, "scene", None)
+        runtime = getattr(scene, "runtime", None)
+        if runtime is None:
+            self._runtime = None
+            self._node_id = None
+            self._environment_id = None
+            return
+
+        for node in runtime.iter_nodes("entity"):
+            if node.instance is self:
+                self._runtime = runtime
+                self._node_id = node.id
+                self._environment_id = node.parent
+                return
+
+        self._runtime = None
+        self._node_id = None
+        self._environment_id = None
+
+    def _cube_rect(self, pos: pygame.Vector2 | None = None) -> pygame.Rect:
+        center = pos if pos is not None else self.pos
+        half = self._half_size()
+        left = center.x - half
+        top = center.y - half
+        size = int(round(self.size))
+        if size <= 0:
+            size = 1
+        return pygame.Rect(int(round(left)), int(round(top)), size, size)
+
+    def _half_size(self) -> float:
+        return max(0.5, self.size * 0.5)
 
     def _draw_velocity(
         self,
         screen: pygame.Surface,
         center: tuple[int, int],
-        radius: int,
         outline: pygame.Color,
     ) -> None:
         if self.velocity.length_squared() <= 1e-6:
@@ -80,7 +191,7 @@ class VisibleMassEntity(MassEntity):
         except ValueError:
             return
 
-        tip = pygame.Vector2(center) + direction * (radius + 16)
+        tip = pygame.Vector2(center) + direction * (self._half_size() + 16)
         pygame.draw.line(screen, outline, center, tip, 2)
 
     def _draw_mass_label(self, app: AppLike, screen: pygame.Surface, center: tuple[int, int]) -> None:

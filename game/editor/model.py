@@ -73,24 +73,48 @@ class EditorModel:
         parent_id = self._resolve_parent(kind, parent_hint)
         if parent_id is None:
             return None
-        payload = item.factory(pygame.Vector2(position))
-        label = self._make_label(item.name)
-        node = Node(
-            id=self._next_id,
-            kind=kind,
-            name=label,
-            base_name=item.name,
-            payload=payload,
-            parent=parent_id,
-            composition_id=self._make_composition_id(kind),
-        )
 
-        self.nodes[node.id] = node
-        self._order.append(node.id)
+        node = self._create_node(item, position, parent_id)
+        self._insert_order(node.id)
         self._attach_child(parent_id, node.id)
-        self._next_id += 1
         self.selected_id = node.id
         return node
+
+    def spawn_from_palette_relative(
+        self,
+        kind: PaletteKind,
+        idx: int,
+        position: tuple[int, int],
+        reference_id: int,
+        *,
+        before: bool,
+    ) -> Node | None:
+        item = self.registry.get_item(kind, idx)
+        if item is None:
+            return None
+
+        reference = self.nodes.get(reference_id)
+        if reference is None or reference.parent is None:
+            return None
+
+        parent_id = reference.parent
+        if not self._parent_allows(parent_id, kind):
+            return None
+
+        node = self._create_node(item, position, parent_id)
+        order_index = self._order_index_near(reference_id, before=before)
+        child_index = self._child_index_near(parent_id, reference_id, before=before)
+
+        self._insert_order(node.id, index=order_index)
+        self._attach_child(parent_id, node.id, index=child_index)
+        self.selected_id = node.id
+        return node
+
+    def can_add_sibling(self, reference_id: int, child_kind: PaletteKind) -> bool:
+        reference = self.nodes.get(reference_id)
+        if reference is None or reference.parent is None:
+            return False
+        return self._parent_allows(reference.parent, child_kind)
 
     def _resolve_parent(self, child_kind: PaletteKind, parent_hint: int | None) -> int | None:
         """Pick the nearest valid parent that satisfies the entity-environment model."""
@@ -121,11 +145,21 @@ class EditorModel:
         }
         return parent.kind in allowed[child_kind]
 
-    def _attach_child(self, parent_id: int, child_id: int) -> None:
+    def _attach_child(self, parent_id: int, child_id: int, index: int | None = None) -> None:
         parent = self.nodes.get(parent_id)
         if parent is None:
             return
-        parent.children.append(child_id)
+        if index is None or index >= len(parent.children):
+            parent.children.append(child_id)
+        else:
+            index = max(0, index)
+            parent.children.insert(index, child_id)
+
+    def _insert_order(self, node_id: int, *, index: int | None = None) -> None:
+        if index is None or index >= len(self._order):
+            self._order.append(node_id)
+            return
+        self._order.insert(max(0, index), node_id)
 
     def _make_label(self, base: str) -> str:
         count = self._label_counts.get(base, 0)
@@ -152,6 +186,39 @@ class EditorModel:
         )
         self.nodes[root.id] = root
         return root.id
+
+    def _create_node(self, item: PaletteItem, position: tuple[int, int], parent_id: int) -> Node:
+        payload = item.factory(pygame.Vector2(position))
+        label = self._make_label(item.name)
+        node = Node(
+            id=self._next_id,
+            kind=item.kind,
+            name=label,
+            base_name=item.name,
+            payload=payload,
+            parent=parent_id,
+            composition_id=self._make_composition_id(item.kind),
+        )
+        self.nodes[node.id] = node
+        self._next_id += 1
+        return node
+
+    def _order_index_near(self, reference_id: int, *, before: bool) -> int | None:
+        try:
+            idx = self._order.index(reference_id)
+        except ValueError:
+            return None
+        return idx if before else idx + 1
+
+    def _child_index_near(self, parent_id: int, reference_id: int, *, before: bool) -> int | None:
+        parent = self.nodes.get(parent_id)
+        if parent is None:
+            return None
+        try:
+            idx = parent.children.index(reference_id)
+        except ValueError:
+            return None
+        return idx if before else idx + 1
 
     # ---------- Consulta ----------
 
@@ -180,6 +247,9 @@ class EditorModel:
         if self.selected_id is None:
             return None
         return self.nodes.get(self.selected_id)
+
+    def node_by_id(self, node_id: int) -> Node | None:
+        return self.nodes.get(node_id)
 
     def selected_label(self) -> str:
         node = self.selected_node()

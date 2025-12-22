@@ -1,11 +1,12 @@
 from .base import Environment
-from .black_zone import BlackZone
 from .music import MusicEnvironment
 from .force import ForceEnvironment
+from .background import BackgroundEnvironment
+from .void import VoidEnvironment
 
 __all__ = [
-    "Environment",
-    "BlackZone",
     "MusicEnvironment",
     "ForceEnvironment",
+    "BackgroundEnvironment",
+    "VoidEnvironment",
 ]
