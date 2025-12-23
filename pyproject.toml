@@ -3,7 +3,8 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pygameTemplate"
+name = "pygame-editor"
+authors = [{ name = "Diego Delgado Chaves", email = "diedelcha@gmail.com" }]
 version = "0.1.0"
 description = "Minimal Pygame scaffold (window + loop)"
 readme = "README.md"
@@ -14,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-pygametemplate = "game.cli:main"
+pygame-editor = "game.cli:main"
 
 [tool.setuptools]
 packages = ["game", "game.core", "game.scenes"]
