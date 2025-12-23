@@ -28,8 +28,6 @@ class SpritePlatform(SpriteColliderMixin, Platform):
         **platform_kwargs,
     ) -> None:
         super().__init__(pos, show_collider=show_collider, **platform_kwargs)
-        self.visible = True
-
 
 class GrassSmallPlatform(SpritePlatform):
     """Plataforma corta de pasto."""
@@ -37,6 +35,15 @@ class GrassSmallPlatform(SpritePlatform):
     SPRITE_PATH = "images/platforms/grass_platforms/small1.png"
     RENDER_SIZE = (192, 60)
     COLLIDER_SIZE = pygame.Vector2(100, 28)
+    def __init__(
+        self,
+        pos: pygame.Vector2 | tuple[float, float] | None = None,
+        *,
+        show_collider: bool = False,
+        **platform_kwargs,
+    ) -> None:
+        super().__init__(pos, show_collider=show_collider, **platform_kwargs)
+        self.visible = True
 
 
 class GrassWidePlatform(SpritePlatform):
@@ -45,6 +52,15 @@ class GrassWidePlatform(SpritePlatform):
     SPRITE_PATH = "images/platforms/grass_platforms/medium1.png"
     RENDER_SIZE = (256, 72)
     COLLIDER_SIZE = pygame.Vector2(228, 34)
+    def __init__(
+        self,
+        pos: pygame.Vector2 | tuple[float, float] | None = None,
+        *,
+        show_collider: bool = False,
+        **platform_kwargs,
+    ) -> None:
+        super().__init__(pos, show_collider=show_collider, **platform_kwargs)
+        self.visible = True
 
 
 class GrassLargePlatform(SpritePlatform):
@@ -53,11 +69,28 @@ class GrassLargePlatform(SpritePlatform):
     SPRITE_PATH = "images/platforms/grass_platforms/large2.png"
     RENDER_SIZE = (320, 84)
     COLLIDER_SIZE = pygame.Vector2(296, 38)
-
+    def __init__(
+        self,
+        pos: pygame.Vector2 | tuple[float, float] | None = None,
+        *,
+        show_collider: bool = False,
+        **platform_kwargs,
+    ) -> None:
+        super().__init__(pos, show_collider=show_collider, **platform_kwargs)
+        self.visible = True
 
 class GrassFloorPlatform(SpritePlatform):
     """Segmento amplio que puede actuar como piso base."""
 
     SPRITE_PATH = "images/platforms/grass_platforms/floor.png"
-    RENDER_SIZE = (512, 96)
-    COLLIDER_SIZE = pygame.Vector2(488, 44)
+    RENDER_SIZE = (720, 480)
+    COLLIDER_SIZE = pygame.Vector2(720, 125)
+    def __init__(
+        self,
+        pos: pygame.Vector2 | tuple[float, float] | None = None,
+        *,
+        show_collider: bool = False,
+        **platform_kwargs,
+    ) -> None:
+        super().__init__(pos, show_collider=show_collider, **platform_kwargs)
+        self.visible = True

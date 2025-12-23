@@ -1,5 +1,5 @@
 [window]
-width = 1024
-height = 768
+width = 720  # 1024 # 720
+height = 480 # 768  # 480
 title = "Pygame Template"
 fps = 60
