@@ -63,11 +63,27 @@ def _run_game(_: argparse.Namespace) -> None:
     run_game()
 
 
-def _run_editor() -> None:
+def _run_editor(_: argparse.Namespace) -> None:
     from game.core.app import App
+    from game.core.config import load_window_config
+    from game.main import _share_path
     from game.scenes.editor import EditorScene
+    import sys # Import sys for sys.exit
 
-    app = App(scene_classes=[EditorScene])
+    cfg = load_window_config(_share_path("configs/settings.toml"))
+    app = App(cfg)
+
+    editor_scene_index = -1
+    for i, scene_cls in enumerate(app.scenes):
+        if scene_cls is EditorScene:
+            editor_scene_index = i
+            break
+    if editor_scene_index != -1:
+        app.set_scene(editor_scene_index)
+    else:
+        print("Error: EditorScene not found in available scenes.")
+        sys.exit(1) # Exit if editor scene isn't found
+
     app.run()
 
 

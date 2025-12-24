@@ -24,14 +24,14 @@ dependencies = [
     "tomli==2.0.1",
     "numpy==1.26.2",
 ]
-include-package-data = true
+
 
 [project.urls]
 Homepage = "https://github.com/daiego/PygameVideogameMaker"
 Issues = "https://github.com/daiego/PygameVideogameMaker/issues"
 
 [project.scripts]
-pygame-editor = "game.cli:run_editor"
+pygame-editor = "game.cli:main"
 
 # ✅ En vez de packages=["game"], usa find para incluir subpaquetes
 [tool.setuptools]
@@ -45,34 +45,7 @@ include = ["game*"]
 [tool.setuptools.exclude-package-data]
 "*" = ["*.pyc", "*.pyo", "__pycache__/*"]
 
-# ⚠️ data-files: SOLO ficheros, NO directorios
 [tool.setuptools.data-files]
-"share/pygame-videogame-maker" = [
-  # root files
-  "README.md",
-  "uv.lock",
-  "PygameVideogameMaker.pygame",
-  "TheEntityEnvironmentModel",
-  "TheEntityEnvironmentModel.md",
-
-  # configs (solo ficheros)
-  "configs/**/*.toml",
-  "configs/**/*.json",
-
-  # assets (solo ficheros por extensión)
-  "assets/**/*.png",
-  "assets/**/*.jpg",
-  "assets/**/*.jpeg",
-  "assets/**/*.webp",
-  "assets/**/*.wav",
-  "assets/**/*.mp3",
-  "assets/**/*.ogg",
-  "assets/**/*.ttf",
-  "assets/**/*.otf",
-
-  # si tienes “archivos sin extensión” (como font_placeholder)
-  "assets/**/font_placeholder",
-
-  # scripts (solo ficheros)
-  "scripts/**/*.py",
+"share/pygame-videogame-maker/configs" = [
+  "configs/settings.toml",
 ]
