@@ -1,232 +1,105 @@
-# Pygame App Template
+# Pygame Videogame Maker
 
-## Estructura y flujo del proyecto
+Un creador de juegos de plataformas 2D con un editor visual, construido con Pygame.
 
-Este proyecto funciona como **plantilla base para juegos y aplicaciones en Pygame**, pensada para ejecutarse tanto en PC como en consolas retro compatibles con Pygame.
+Este proyecto te permite diseñar y construir niveles utilizando un editor incorporado y luego jugar inmediatamente.
 
-> **Descargo de responsabilidad:** la plantilla se entrega tal cual; úsala y modifícala *at your own risk* y verifica cada cambio antes de desplegarlo.
+[SCREENSHOT: Gameplay mostrando al personaje jugador, plataformas y el fondo.]
 
-La arquitectura se divide en tres capas principales: **core**, **scenes** y **entities**.
-Cada capa tiene responsabilidades claras y límites definidos.
+## Características
 
-## Generar un nuevo proyecto
+*   **Editor Visual**: Crea y modifica niveles en tiempo real. Coloca plataformas, enemigos y otros elementos del juego visualmente.
+*   **Modelo Entidad-Entorno (EEI)**: Una arquitectura flexible para definir objetos del juego y sus interacciones.
+*   **Soporte para Mandos**: Perfiles de mando configurables para una experiencia de juego plug-and-play.
+*   **Listo para Despliegue**: Incluye scripts para empaquetar y desplegar el juego en consolas retro compatibles.
 
-Instala la plantilla (por ejemplo con `pip install -e .`) y ejecuta:
+## Primeros Pasos
+
+### 1. Instalación
+
+Para instalar las dependencias del proyecto, ejecuta el siguiente comando:
 
 ```bash
-pygametemplate new MiJuego
-```
-
-El comando creará una carpeta con la estructura completa, ajustará el `pyproject.toml`, renombrará el launcher `.pygame` y dejará todo listo para iterar. Puedes especificar otra ruta raíz con `--output-dir`. Si no pasas subcomando, `pygametemplate` sigue ejecutando el juego actual (equivalente a `pygametemplate run`).
-
----
-
-## 1. Core
-
-El **core** contiene el bucle principal del programa y la inicialización global.
-
-Aquí es donde:
-
-* Se inicializa Pygame y sus subsistemas
-* Se carga la configuración desde `settings.toml`
-* Se crea la ventana (resolución, FPS, etc.)
-* Se controla el ciclo principal (`handle_event → update → render`)
-* Se gestiona el `clock` y el `dt`
-* Se delega el control a la escena activa
-* Se inicializan sistemas globales (audio, recursos, debug, etc.)
-
-### Convención importante sobre el tiempo
-
-El `dt` que se pasa a las escenas **siempre representa el tiempo transcurrido en segundos** (`float`).
-
-```python
-dt = clock.tick()  # segundos
-```
-
-👉 **Nunca se usan milisegundos en la lógica del juego**.
-Si alguna librería externa necesita milisegundos (por ejemplo, `pygame.mixer`), la conversión se hace explícitamente.
-
----
-
-### 👉 Cuándo modificar el core
-
-Solo cuando necesites:
-
-* Cambiar el comportamiento global del juego
-* Añadir sistemas transversales (audio manager, input global, debug, etc.)
-* Alterar el loop principal
-* Ajustar cómo se gestionan escenas o recursos
-
-Si estás añadiendo gameplay, **probablemente no necesitas tocar el core**.
-
----
-
-## 2. Scenes
-
-Las **scenes** representan los distintos estados o pantallas del juego: menú, juego, pausa, loading, tests, etc.
-
-Cada escena:
-
-* Maneja sus propios eventos
-* Actualiza su lógica usando `dt` (en segundos)
-* Dibuja su contenido
-* Decide cuándo cambiar a otra escena
-* Controla qué audio se reproduce al entrar o salir
-
-La plantilla incluye escenas de prueba (por ejemplo, `BlankScene`, `AssetsTestScene`) que sirven como referencia y entorno de experimentación.
-
-### Ciclo de vida de una escena
-
-```text
-on_enter → handle_event → update → render → on_exit
-```
-
-👉 `on_enter` y `on_exit` son los lugares correctos para:
-
-* Arrancar o parar música
-* Inicializar o limpiar recursos propios de la escena
-* Resetear estado interno
-
----
-
-### 👉 Cuándo crear o modificar una escena
-
-* Cuando quieras añadir una nueva pantalla o modo
-* Cuando cambie la lógica principal del juego
-* Para separar responsabilidades y evitar lógica monolítica
-* Para aislar pruebas (assets, input, rendimiento, etc.)
-
-Regla simple:
-**si cambia lo que ve o hace el jugador, probablemente es una escena nueva**.
-
----
-
-## 3. Entities
-
-Las **entities** son los elementos vivos del juego: jugador, enemigos, objetos, UI, animaciones, etc.
-
-Una entity:
-
-* Tiene estado propio
-* Se actualiza cada frame
-* Se dibuja dentro de una escena
-* No conoce el loop global ni otras escenas directamente
-* No controla audio ni escenas por sí misma
-
-👉 Las escenas **orquestan**, las entities **actúan**.
-
----
-
-### 👉 Cuándo crear o modificar entities
-
-* Para añadir comportamiento reutilizable
-* Para encapsular lógica concreta
-* Para evitar código duplicado dentro de las escenas
-* Para mantener las escenas legibles y pequeñas
-
-Si una escena empieza a crecer demasiado, probablemente necesitas entities.
-
----
-
-## Audio y multimedia
-
-El audio se gestiona exclusivamente a través del **AudioManager**, inicializado en el core y accesible desde las escenas.
-
-* La música y los efectos de sonido están separados
-* El control de audio pertenece a las escenas, no a las entities
-* Los tiempos de fade se expresan explícitamente en milisegundos (`fade_ms`)
-
-### Sobre vídeo
-
-Pygame **no es un motor multimedia completo**.
-El soporte de vídeo es experimental y está pensado solo para:
-
-* Tests de assets
-* Prototipos
-* Fondos animados simples
-
-Para gameplay y escenas importantes, se recomienda usar:
-
-* Animaciones
-* Spritesheets
-* Secuencias de imágenes
-
-El vídeo **no es un pilar del engine**.
-
----
-
-## Configuración: `settings.toml`
-
-Toda la información relacionada con la ventana y el rendimiento debe definirse en `settings.toml`.
-
-En este archivo se especifica, entre otros:
-
-* Resolución de pantalla
-* FPS objetivo
-* Opciones generales de ejecución
-
-👉 **No hardcodees resolución ni FPS en el código**.
-Cualquier ajuste de pantalla debe hacerse aquí para garantizar portabilidad entre PC y consolas.
-
-### Controladores e Input
-
-Los mandos físicos se describen ahora en `configs/controllers/generic.toml` mediante TOML. Cada entrada especifica ejes, botones y hats por nombre (`left_x`, `a`, `dpad`, etc). El editor y el `InputTester` usan este perfil para asociar los índices reales del joystick a acciones concretas, por lo que basta con ajustar este archivo para adaptar la plantilla a otro gamepad sin tocar código. Puedes duplicarlo y crear variaciones si necesitas varios perfiles.
-
----
-
-## Dependencias y vendor bundle
-
-El proyecto utiliza un **vendor bundle** para incluir dependencias de Python junto al juego.
-
-El archivo `make_vendor` define **qué paquetes se incluyen**.
-
-👉 **Cuándo modificar `make_vendor`**
-
-* Cuando añadas una nueva dependencia externa
-* Cuando elimines librerías que ya no se usan
-* Cuando quieras controlar explícitamente qué entra en el bundle final
-
-Tras modificar este archivo, debes regenerar el vendor bundle antes de copiar el juego.
-
----
-
-## Podar sprites PNG
-
-Cuando importas sprites con bordes transparentes grandes (por ejemplo, las plataformas en `assets/images/platforms`), puedes recortarlos automáticamente con Pillow:
-
-```bash
-# Instala deps si no lo has hecho
 uv sync
-
-# Recorta todas las plataformas (usa --dry-run para probar sin escribir)
-uv run python scripts/prune_pngs.py
 ```
 
-El script acepta rutas extra (`uv run python scripts/prune_pngs.py assets/images/pc`) y parámetros para ajustar el umbral del canal alfa (`--threshold`) o el colchón transparente que se vuelve a añadir tras el recorte (`--margin`).
+### 2. Ejecutar el Editor
 
----
+El proyecto incluye un editor visual que se ejecuta por defecto. Para lanzarlo, usa este comando:
 
-## Despliegue en consola
+```bash
+uv run pygame-editor
+```
 
-Crear bundle y sincronizarlo con la consola:
-```commandline
+Esto abrirá la ventana principal, cargando la escena del editor.
+
+### 3. Jugar al Juego
+
+Dentro de la aplicación, puedes cambiar entre diferentes escenas (Editor, Juego, Test de Input) usando las siguientes teclas:
+
+*   **F2 / Tab**: Cambiar a la siguiente escena.
+*   **F1 / Shift+Tab**: Cambiar a la escena anterior.
+
+La escena principal del juego (`MainScene`) es típicamente la primera en el ciclo, permitiéndote jugar los niveles que has creado.
+
+## El Editor Visual
+
+El editor es la herramienta central para construir tu juego. Te permite:
+
+*   **Componer Escenas**: Añade, selecciona y mueve entidades directamente en el espacio del juego.
+*   **Configurar Propiedades**: Ajusta las propiedades de cada entidad, como su sprite, comportamiento y atributos físicos.
+*   **Exportar Niveles**: Guarda tus creaciones en un archivo de composición (`.eei.json`) que el juego puede cargar.
+
+[SCREENSHOT: La interfaz del editor visual, mostrando la colocación de entidades y el editor de propiedades.]
+
+## El Modelo Entidad-Entorno (EEI)
+
+El proyecto utiliza un modelo de diseño donde el juego se construye a partir de dos componentes principales:
+
+*   **Entornos (`Environment`)**: Representan espacios o zonas que aplican reglas a los objetos dentro de ellos. Por ejemplo, un entorno de "gravedad" aplica una fuerza hacia abajo a todas las entidades que contiene. Los entornos se pueden anidar y sus efectos se combinan.
+*   **Entidades (`Entity`)**: Son los objetos interactivos del juego, como el jugador, los enemigos, las plataformas o los ítems. Las entidades viven dentro de los entornos y son afectadas por sus reglas.
+
+Este modelo permite una forma flexible y componible de construir lógicas de juego complejas.
+
+## Configuración
+
+### Ventana y Rendimiento
+
+Puedes ajustar la resolución de la pantalla, los FPS y otros ajustes generales en `configs/settings.toml`.
+
+```toml
+title = "Pygame Videogame Maker"
+width = 1280
+height = 720
+fps = 60
+```
+
+### Controles y Mandos
+
+Los mapeos de los mandos se definen en `configs/controllers/generic.toml`. Puedes editar este archivo para adaptar el juego a diferentes gamepads sin cambiar el código.
+
+```toml
+# Ejemplo de mapeo de un botón
+a = { type = "button", index = 0, label = "A" }
+```
+
+## Despliegue en Consola
+
+Si estás trabajando con una consola retro o un dispositivo similar, puedes usar el script de despliegue para empaquetar y transferir tu juego:
+
+```bash
 bash deploy_to_console.sh
 ```
 
-No es necesario ningún paso adicional.
-La consola detectará el proyecto y podrá ejecutarse directamente.
+El script se encarga de empaquetar las dependencias y los assets necesarios.
 
----
+## Scripts de Utilidad
 
-## Filosofía de la plantilla
+### Optimizar Imágenes PNG
 
-Esta plantilla está pensada para:
+El proyecto incluye un script para recortar el espacio transparente sobrante en tus sprites, optimizando su tamaño en memoria.
 
-* Iterar rápido
-* Mantener el código legible
-* Separar claramente responsabilidades
-* Facilitar el despliegue en hardware limitado
-* Evitar “ingeniería prematura”
-
-Empieza simple.
-Cuando algo duela, **ahí es donde se refactoriza**.
+```bash
+# Recorta todas las imágenes en la carpeta de plataformas
+uv run python scripts/prune_pngs.py assets/images/platforms/grass_platforms
+```
