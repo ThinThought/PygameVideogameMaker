@@ -19,4 +19,5 @@ dependencies = [
 pygame-editor = "game.cli:main"
 
 [tool.setuptools]
-packages = ["game", "game.core", "game.scenes"]
+packages = find:
+package-dir = {"" = "."}
