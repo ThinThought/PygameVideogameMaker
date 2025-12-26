@@ -41,11 +41,10 @@ class GrassSmallPlatform(SpritePlatform):
         self,
         pos: pygame.Vector2 | tuple[float, float] | None = None,
         *,
-        show_collider: bool = False,
+        show_collider: bool = True,
         **platform_kwargs,
     ) -> None:
         super().__init__(pos, show_collider=show_collider, **platform_kwargs)
-        self.visible = False
 
 
 class GrassWidePlatform(SpritePlatform):
@@ -59,11 +58,10 @@ class GrassWidePlatform(SpritePlatform):
         self,
         pos: pygame.Vector2 | tuple[float, float] | None = None,
         *,
-        show_collider: bool = False,
+        show_collider: bool = True,
         **platform_kwargs,
     ) -> None:
         super().__init__(pos, show_collider=show_collider, **platform_kwargs)
-        self.visible = False
 
 
 class GrassLargePlatform(SpritePlatform):
@@ -77,12 +75,10 @@ class GrassLargePlatform(SpritePlatform):
         self,
         pos: pygame.Vector2 | tuple[float, float] | None = None,
         *,
-        show_collider: bool = False,
+        show_collider: bool = True,
         **platform_kwargs,
     ) -> None:
         super().__init__(pos, show_collider=show_collider, **platform_kwargs)
-        self.visible = False
-
 
 class GrassFloorPlatform(SpritePlatform):
     """Segmento amplio que puede actuar como piso base."""
@@ -95,8 +91,7 @@ class GrassFloorPlatform(SpritePlatform):
         self,
         pos: pygame.Vector2 | tuple[float, float] | None = None,
         *,
-        show_collider: bool = False,
+        show_collider: bool = True,
         **platform_kwargs,
     ) -> None:
         super().__init__(pos, show_collider=show_collider, **platform_kwargs)
-        self.visible = False

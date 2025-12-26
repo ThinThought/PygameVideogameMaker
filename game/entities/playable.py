@@ -3,10 +3,11 @@ from __future__ import annotations
 import pygame
 from typing import Any
 
+from game.entities.sprite_collider import SpriteColliderMixin
 from game.entities.visible_mass import VisibleMassEntity
 
 
-class PlayableMassEntity(VisibleMassEntity):
+class PlayableMassEntity(VisibleMassEntity, SpriteColliderMixin):
     MAX_SPEED_X: float = 1.5  # m/s  (~140 px/s if PPM=100)
     GROUND_ACCEL: float = 9.0  # m/s^2
     AIR_ACCEL: float = 5.0  # m/s^2
@@ -26,9 +27,18 @@ class PlayableMassEntity(VisibleMassEntity):
         *,
         mass: float = 1.0,
         size: float = 48.0,
+        visible: bool = True,
+        show_collider: bool = False,
         **kwargs: Any,
     ) -> None:
-        super().__init__(pos=pos, mass=mass, size=size, **kwargs)
+        super().__init__(
+            pos=pos,
+            mass=mass,
+            size=size,
+            visible=visible,
+            show_collider=show_collider,
+            **kwargs,
+        )
 
         self._left = False
         self._right = False

@@ -28,7 +28,7 @@ class SpriteColliderMixin:
         self,
         pos: pygame.Vector2 | tuple[float, float] | None = None,
         *,
-        show_collider: bool = False,
+        show_collider: bool = True,
         **collider_kwargs,
     ) -> None:
         collider_kwargs = dict(collider_kwargs)

@@ -119,7 +119,7 @@ class SpriteAnimator:
 
 class SpykePlayer(PlayableMassEntity):
     SPRITE_BASE = "images/pc/spyke"  # relativo a assets/
-    SPRITE_SCALE_FACTOR = 1.0  # 1.0 = 100% del tamaño original
+    SPRITE_SCALE_FACTOR = 0.10  # 1.0 = 100% del tamaño original
     COLLIDER_SIZE = (32, 60)  # tamaño para físicas
     WALK_FPS = 12.0
     IDLE_FPS = 6.0
@@ -130,14 +130,13 @@ class SpykePlayer(PlayableMassEntity):
     _preview_loaded: bool = False
 
     def __init__(self, pos=None, *, mass: float = 1.0, **kwargs: Any) -> None:
-        super().__init__(pos=pos, mass=mass, size=self.COLLIDER_SIZE, **kwargs)
+        super().__init__(pos=pos, mass=mass, visible=True, show_collider=True, **kwargs)
 
         self._left = False
         self._right = False
         self._jump_pressed = False
         self._jump_time_left = 0.0
         self._is_jumping = False
-
         self.anim: SpriteAnimator | None = None
 
     def on_spawn(self, app: Any) -> None:
@@ -250,7 +249,7 @@ class SpykePlayer(PlayableMassEntity):
         screen.blit(frame, sprite_rect)
 
         # Opcional: dibujar el colisionador para depurar
-        if getattr(app, "DEBUG_COLLIDERS", False):
+        if self.show_collider or getattr(app, "DEBUG_COLLIDERS", False):
             pygame.draw.rect(screen, (255, 0, 0), collider_rect, 1)
 
     @classmethod

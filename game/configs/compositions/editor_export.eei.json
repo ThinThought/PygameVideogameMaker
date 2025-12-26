@@ -33,7 +33,7 @@
       },
       "children": [
         "ent-005",
-        "ent-006"
+        "ent-012"
       ]
     },
     {
@@ -52,14 +52,14 @@
           720.0,
           160.0
         ],
-        "visible": false,
+        "visible": true,
         "friction": 0.85,
         "grip": 1.0
       },
       "children": []
     },
     {
-      "id": "ent-006",
+      "id": "ent-012",
       "kind": "entity",
       "type": "game.entities.spyke_player.SpykePlayer",
       "parent": "env-003",
@@ -75,12 +75,14 @@
           0.0,
           0.0
         ],
+        "visible": true,
+        "show_collider": true,
         "color": "(76, 139, 245, 255)",
         "outline_color": "(18, 44, 92, 255)",
         "label_color": "(255, 255, 255, 255)",
         "size": [
-          32.0,
-          60.0
+          48.0,
+          48.0
         ],
         "show_velocity": true,
         "show_label": true,

@@ -26,8 +26,13 @@ class VisibleMassEntity(MassEntity):
         size: float | tuple[float, float] | pygame.Vector2 = 32.0,
         show_velocity: bool = True,
         show_label: bool = True,
+        visible: bool = True,
+        show_collider: bool = False,
     ) -> None:
         super().__init__(pos=pos, mass=mass, velocity=velocity)
+
+        self.visible = visible
+        self.show_collider = show_collider
 
         # OJO: aquí normalizamos, pero AUN ASÍ podemos ser pisados luego por runtime/editor.
         self.color = self._to_color(color, fallback=(76, 139, 245))
@@ -70,6 +75,8 @@ class VisibleMassEntity(MassEntity):
 
     # ------------------------------------------------------------------
     def render(self, app: AppLike, screen: pygame.Surface) -> None:
+        if not self.visible:
+            return
         rect = self._collider_rect()
         center = rect.center
 
