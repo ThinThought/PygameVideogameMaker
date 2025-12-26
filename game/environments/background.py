@@ -30,7 +30,9 @@ class BackgroundEnvironment(Environment):
             str(get_asset_path("images/backgrounds/bg1/bg_sky.png")),
         ]
 
-        self.layers = list(layers) if layers is not None else list(DEFAULT_BACKGROUND_PATHS)
+        self.layers = (
+            list(layers) if layers is not None else list(DEFAULT_BACKGROUND_PATHS)
+        )
         self.fill_color = fill_color
 
         self._surface: pygame.Surface | None = None

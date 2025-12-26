@@ -17,15 +17,19 @@ from rich.panel import Panel
 
 console = Console()
 
+
 class HudLine(NamedTuple):
     text: str
     color: tuple[int, int, int]
     align: str = "left"  # "left" | "center" | "right"
 
+
 def _build_scenes() -> dict[str, Type[Scene]]:
     # SCENES: dict[str, Type[Scene]]
     import game.scenes as scenes_for_app
+
     return scenes_for_app.SCENES
+
 
 class App:
     def __init__(self, config: WindowConfig) -> None:
@@ -76,7 +80,11 @@ class App:
         self._hud_last_input = "-"
         self._hud_recent_inputs: deque[str] = deque(maxlen=5)
 
-        self._avg_timings: dict[str, float] = {"events": 0.0, "update": 0.0, "render": 0.0}
+        self._avg_timings: dict[str, float] = {
+            "events": 0.0,
+            "update": 0.0,
+            "render": 0.0,
+        }
         self._avg_fps = 0.0
         self._avg_dt_ms = 0.0
         self._hud_stats_alpha = 0.12
@@ -99,7 +107,11 @@ class App:
         self._profiling_mode = False
         self._profiling_frame_window = 60
         self._profiling_frames = 0
-        self._profiling_accumulator: dict[str, float] = {"events": 0.0, "update": 0.0, "render": 0.0}
+        self._profiling_accumulator: dict[str, float] = {
+            "events": 0.0,
+            "update": 0.0,
+            "render": 0.0,
+        }
 
     # --- Scene switching -------------------------------------------------
     def _wrap_index(self, index: int) -> int:
@@ -119,7 +131,6 @@ class App:
         self._scene_index = new_index
         scene_id = self._scene_ids[self._scene_index]
         scene_cls = self.scenes[scene_id]
-
         # Caso especial: MainScene recibe composition_path
         if getattr(scene_cls, "__name__", "") == "MainScene":
             self.scene = scene_cls(composition_path=composition_path)  # type: ignore[call-arg]
@@ -128,7 +139,9 @@ class App:
 
         self.scene.on_enter(self)
 
-        self._toast_text = f"{scene_id}  ({self._scene_index + 1}/{len(self._scene_ids)})"
+        self._toast_text = (
+            f"{scene_id}  ({self._scene_index + 1}/{len(self._scene_ids)})"
+        )
         self._toast_t = 1.2
 
         console.print(
@@ -219,7 +232,9 @@ class App:
                 if ev.type == pygame.KEYDOWN:
                     if ev.key == pygame.K_p:
                         self._profiling_mode = not self._profiling_mode
-                        self._toast_text = f"Profiling {'ON' if self._profiling_mode else 'OFF'}"
+                        self._toast_text = (
+                            f"Profiling {'ON' if self._profiling_mode else 'OFF'}"
+                        )
                         self._toast_t = 1.0
                         self._profiling_frames = 0
                         self._reset_profiling_accumulators()
@@ -229,11 +244,15 @@ class App:
                         self.toggle_hud()
                         continue
 
-                    if ev.key in (pygame.K_F2, pygame.K_TAB) and not (ev.mod & pygame.KMOD_SHIFT):
+                    if ev.key in (pygame.K_F2, pygame.K_TAB) and not (
+                        ev.mod & pygame.KMOD_SHIFT
+                    ):
                         self.next_scene()
                         continue
 
-                    if ev.key == pygame.K_F1 or (ev.key == pygame.K_TAB and (ev.mod & pygame.KMOD_SHIFT)):
+                    if ev.key == pygame.K_F1 or (
+                        ev.key == pygame.K_TAB and (ev.mod & pygame.KMOD_SHIFT)
+                    ):
                         self.prev_scene()
                         continue
 
@@ -316,7 +335,9 @@ class App:
         avg_update = self._profiling_accumulator["update"] / frames
         avg_render = self._profiling_accumulator["render"] / frames
 
-        lines = [f"avg events {avg_events:0.2f}ms   update {avg_update:0.2f}ms   render {avg_render:0.2f}ms"]
+        lines = [
+            f"avg events {avg_events:0.2f}ms   update {avg_update:0.2f}ms   render {avg_render:0.2f}ms"
+        ]
 
         update_top: list[tuple[str, float]] = []
         render_top: list[tuple[str, float]] = []
@@ -326,11 +347,19 @@ class App:
                 update_top, render_top = reporter()
 
         if update_top:
-            lines.append("Update top: " + ", ".join(f"{name} {time:0.2f}ms" for name, time in update_top))
+            lines.append(
+                "Update top: "
+                + ", ".join(f"{name} {time:0.2f}ms" for name, time in update_top)
+            )
         if render_top:
-            lines.append("Render top: " + ", ".join(f"{name} {time:0.2f}ms" for name, time in render_top))
+            lines.append(
+                "Render top: "
+                + ", ".join(f"{name} {time:0.2f}ms" for name, time in render_top)
+            )
 
-        console.print(Panel.fit("\n".join(lines), title="Profiling (avg)", border_style="yellow"))
+        console.print(
+            Panel.fit("\n".join(lines), title="Profiling (avg)", border_style="yellow")
+        )
 
     # --- HUD render ------------------------------------------------------
     def _render_hud(self, dt: float) -> None:
@@ -346,7 +375,9 @@ class App:
         fps = 0.0 if dt <= 0 else (1.0 / dt)
         scene_name = self.scene.__class__.__name__ if self.scene else "None"
         scene_id = self._scene_ids[self._scene_index] if self._scene_ids else "-"
-        left_text = f"{scene_name}  [{scene_id} {self._scene_index + 1}/{len(self._scene_ids)}]"
+        left_text = (
+            f"{scene_name}  [{scene_id} {self._scene_index + 1}/{len(self._scene_ids)}]"
+        )
 
         center_text = f"FPS {fps:0.1f}   dt {dt * 1000:0.1f} ms"
         right_text = self._toast_text or "F1/F2  TAB / SHIFT+TAB"
@@ -379,7 +410,9 @@ class App:
 
         pygame.draw.line(self.screen, (70, 70, 70), (0, bar_y), (w, bar_y), 1)
 
-    def _hud_text_surface(self, key: str, text: str, color: tuple[int, int, int]) -> pygame.Surface:
+    def _hud_text_surface(
+        self, key: str, text: str, color: tuple[int, int, int]
+    ) -> pygame.Surface:
         cached = self._hud_text_cache.get(key)
         if cached and cached[0] == text:
             return cached[1]
@@ -387,7 +420,9 @@ class App:
         self._hud_text_cache[key] = (text, surface)
         return surface
 
-    def _ensure_hud_bar_surface(self, width: int, height: int, alpha: int) -> pygame.Surface:
+    def _ensure_hud_bar_surface(
+        self, width: int, height: int, alpha: int
+    ) -> pygame.Surface:
         size = (width, height)
         if (
             self._hud_bar_surface is None
@@ -460,7 +495,9 @@ class App:
             name = getattr(self.audio, "current_music", None)
             pos_ms = max(0, pygame.mixer.music.get_pos())
             pos_s = pos_ms / 1000.0
-            parts.append(f"music {name} {pos_s:0.1f}s" if name else f"music {pos_s:0.1f}s")
+            parts.append(
+                f"music {name} {pos_s:0.1f}s" if name else f"music {pos_s:0.1f}s"
+            )
         else:
             parts.append("music idle")
 

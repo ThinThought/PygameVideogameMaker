@@ -17,10 +17,52 @@
   },
   "nodes": [
     {
-      "id": "env-001",
+      "id": "env-003",
       "kind": "environment",
-      "type": "game.environments.background.BackgroundEnvironment",
+      "type": "game.environments.force.ForceEnvironment",
       "parent": null,
+      "transform": {
+        "position": [
+          101.78313253012053,
+          72.48192771084338
+        ]
+      },
+      "state": {
+        "magnitude": 9.81,
+        "auto_integrate": true
+      },
+      "children": [
+        "ent-005",
+        "ent-006"
+      ]
+    },
+    {
+      "id": "ent-005",
+      "kind": "entity",
+      "type": "game.entities.platforms.GrassFloorPlatform",
+      "parent": "env-003",
+      "transform": {
+        "position": [
+          505.8313253012048,
+          593.7349397590361
+        ]
+      },
+      "state": {
+        "size": [
+          720.0,
+          160.0
+        ],
+        "visible": false,
+        "friction": 0.85,
+        "grip": 1.0
+      },
+      "children": []
+    },
+    {
+      "id": "ent-006",
+      "kind": "entity",
+      "type": "game.entities.spyke_player.SpykePlayer",
+      "parent": "env-003",
       "transform": {
         "position": [
           512.0,
@@ -28,10 +70,22 @@
         ]
       },
       "state": {
-        "layers": [
-          "/home/daiego/ThinThought/Repositories/PygameVideogameMaker/game/assets/images/backgrounds/bg1/bg_sky.png"
+        "mass": 1.0,
+        "velocity": [
+          0.0,
+          0.0
         ],
-        "fill_color": "#0b0b0f"
+        "color": "(76, 139, 245, 255)",
+        "outline_color": "(18, 44, 92, 255)",
+        "label_color": "(255, 255, 255, 255)",
+        "size": [
+          32.0,
+          60.0
+        ],
+        "show_velocity": true,
+        "show_label": true,
+        "grounded": false,
+        "anim": null
       },
       "children": []
     }

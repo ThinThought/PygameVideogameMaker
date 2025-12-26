@@ -76,7 +76,9 @@ class SpriteAnimator:
                 break
 
         if not frames:
-            raise FileNotFoundError(f"No hay frames para estado {state!r} en {relative_folder_path}")
+            raise FileNotFoundError(
+                f"No hay frames para estado {state!r} en {relative_folder_path}"
+            )
 
         # scaling logic...
         if self.scale_factor is not None and self.scale_factor != 1.0:
@@ -270,7 +272,7 @@ class SpykePlayer(PlayableMassEntity):
         candidate_relative_paths: list[str] = []
         if prefer_idle:
             try:
-                get_asset_path(f"{base_asset_path_str}/idle/1.png") # Check existence
+                get_asset_path(f"{base_asset_path_str}/idle/1.png")  # Check existence
                 candidate_relative_paths.append(f"{base_asset_path_str}/idle/1.png")
             except FileNotFoundError:
                 pass

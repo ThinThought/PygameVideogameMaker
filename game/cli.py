@@ -31,9 +31,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     run_parser.set_defaults(func=_run_game)
 
-    editor_parser = subparsers.add_parser(
-        "editor", help="Inicia el editor del juego."
-    )
+    editor_parser = subparsers.add_parser("editor", help="Inicia el editor del juego.")
     editor_parser.set_defaults(func=_run_editor)
 
     new_parser = subparsers.add_parser(
@@ -68,7 +66,7 @@ def _run_editor(_: argparse.Namespace) -> None:
     from game.core.config import load_window_config
     from game.main import _share_path
     from game.scenes.editor import EditorScene
-    import sys # Import sys for sys.exit
+    import sys  # Import sys for sys.exit
 
     cfg = load_window_config(_share_path("configs", "settings.toml"))
     app = App(cfg)
@@ -82,7 +80,7 @@ def _run_editor(_: argparse.Namespace) -> None:
         app.set_scene(editor_scene_index)
     else:
         print("Error: EditorScene not found in available scenes.")
-        sys.exit(1) # Exit if editor scene isn't found
+        sys.exit(1)  # Exit if editor scene isn't found
 
     app.run()
 

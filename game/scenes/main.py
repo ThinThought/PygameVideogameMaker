@@ -10,6 +10,7 @@ from game.scenes.base import AppLike, Scene
 
 from game.core.resources import get_composition_path, get_config_path
 
+
 class MainScene(Scene):
     def __init__(self, composition_path: str | Path | None = None) -> None:
         self.runtime: CompositionRuntime | None = None
@@ -25,12 +26,13 @@ class MainScene(Scene):
         self._native_resolution: bool = False
 
     def _default_composition_path(self) -> str | None:
-        for candidate in ("editor_export.eei.json",):
+        for candidate in ("compositions/editor_export.eei.json",):
             try:
                 print(f"DEBUG: _default_composition_path - candidate: {candidate}")
-                constructed_path = f"configs/compositions/{candidate}"
-                print(f"DEBUG: _default_composition_path - constructed_path: {constructed_path}")
-                get_config_path(constructed_path)
+                constructed_path = get_config_path(candidate)
+                print(
+                    f"DEBUG: _default_composition_path - constructed_path: {constructed_path}"
+                )
                 return constructed_path
             except FileNotFoundError:
                 continue
@@ -43,7 +45,9 @@ class MainScene(Scene):
                 return provided_str
             else:
                 try:
-                    print(f"DEBUG: _resolve_composition_path - provided_str: {provided_str}")
+                    print(
+                        f"DEBUG: _resolve_composition_path - provided_str: {provided_str}"
+                    )
                     get_config_path(provided_str)
                     return provided_str
                 except FileNotFoundError:
@@ -230,4 +234,3 @@ class MainScene(Scene):
             return [(_label(node_id), elapsed) for node_id, elapsed in entries[:limit]]
 
         return _top(self._node_update_times), _top(self._node_render_times)
-

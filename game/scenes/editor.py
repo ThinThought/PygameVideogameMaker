@@ -167,7 +167,9 @@ class EditorScene(Scene):
         self.context_menu_stage: str = "root"
         self.context_menu_stage_data: dict[str, Any] = {}
         root = Path(__file__).resolve().parents[2]
-        self._controller_cfg_path = root / "game" / "configs" / "controllers" / "generic.toml"
+        self._controller_cfg_path = (
+            root / "game" / "configs" / "controllers" / "generic.toml"
+        )
         self.controller_profile = ControllerProfile.default()
         self._vcursor_axes: tuple[int, int] = (0, 1)
         self._vcursor_primary_buttons: tuple[int, ...] = (0,)
@@ -1622,9 +1624,7 @@ class EditorScene(Scene):
                 self.vcursor_vel.x = ax * self.vcursor_speed
                 self.vcursor_vel.y = ay * self.vcursor_speed
 
-                self._pointer_move(
-                    (int(self.vcursor_pos.x), int(self.vcursor_pos.y))
-                )
+                self._pointer_move((int(self.vcursor_pos.x), int(self.vcursor_pos.y)))
 
             # --- scroll (right stick Y) ---
             if ev.axis == self._vscroll_axis:
@@ -1879,7 +1879,7 @@ class EditorScene(Scene):
         if self._composition_path is not None:
             return self._composition_path
         root = Path(__file__).resolve().parents[2]
-        return root / "game"/ "configs" / "compositions" / "editor_export.eei.json"
+        return root / "game" / "configs" / "compositions" / "editor_export.eei.json"
 
     def _composition_candidates(self) -> list[Path]:
         root = Path(__file__).resolve().parents[2] / "game" / "configs" / "compositions"

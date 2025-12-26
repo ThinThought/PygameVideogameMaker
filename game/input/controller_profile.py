@@ -40,6 +40,7 @@ class ControllerProfile:
     @classmethod
     def from_toml(cls, relative_path: str) -> ControllerProfile:
         from game.core.resources import get_config_path
+
         cfg_path = get_config_path(relative_path)
         with cfg_path.open("rb") as fh:
             data = tomllib.load(fh)

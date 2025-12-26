@@ -39,7 +39,9 @@ class InputTesterScene(Scene):
 
         root = Path(__file__).resolve().parents[2]
         self._composition_path = self._default_composition_path()
-        self._joystick_cfg_path = root  / "game" / "configs" / "input_tester_joystick.json"
+        self._joystick_cfg_path = (
+            root / "game" / "configs" / "input_tester_joystick.json"
+        )
         self._snapshot_dirty = False
         self._snapshot_cooldown = 0.25  # segs entre escrituras en disco
         self._last_snapshot = time.monotonic()

@@ -58,13 +58,13 @@ class CompositionRuntime:
 
 def load_composition(path: str | Path) -> CompositionRuntime:
     from game.core.resources import get_composition_path
-    
+
     resolved_path: Path
     if isinstance(path, Path):
         resolved_path = path
     else:
         resolved_path = get_composition_path(path)
-        
+
     data = json.loads(resolved_path.read_text(encoding="utf-8"))
 
     canvas_size, origin = _parse_scene_block(data.get("scene"))
