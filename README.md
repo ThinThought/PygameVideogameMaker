@@ -1,67 +1,67 @@
 # Pygame Videogame Maker
 
-Un creador de juegos de plataformas 2D con un editor visual, construido con Pygame.
+A 2D platformer game creator with a built-in visual editor, built with Pygame.
 
-Este proyecto te permite diseñar y construir niveles utilizando un editor incorporado y luego jugar inmediatamente.
+This project lets you design and build levels using an integrated editor and then play them immediately.
 
-[SCREENSHOT: Gameplay mostrando al personaje jugador, plataformas y el fondo.]
+[SCREENSHOT: Gameplay showing the player character, platforms, and background.]
 
-## Características
+## Features
 
-*   **Editor Visual**: Crea y modifica niveles en tiempo real. Coloca plataformas, enemigos y otros elementos del juego visualmente.
-*   **Modelo Entidad-Entorno (EEI)**: Una arquitectura flexible para definir objetos del juego y sus interacciones.
-*   **Soporte para Mandos**: Perfiles de mando configurables para una experiencia de juego plug-and-play.
-*   **Listo para Despliegue**: Incluye scripts para empaquetar y desplegar el juego en consolas retro compatibles.
+* **Visual Editor**: Create and modify levels in real time. Place platforms, enemies, and other game elements visually.
+* **Entity–Environment Interaction Model (EEI)**: A flexible architecture for defining game objects and their interactions.
+* **Controller Support**: Configurable controller profiles for a plug-and-play gaming experience.
+* **Deployment-Ready**: Includes scripts to package and deploy the game to compatible retro consoles.
 
-## Primeros Pasos
+## Getting Started
 
-### 1. Instalación
+### 1. Installation
 
-Para instalar las dependencias del proyecto, ejecuta el siguiente comando:
+To install the project dependencies, run:
 
 ```bash
 uv sync
 ```
 
-### 2. Ejecutar el Editor
+### 2. Run the Editor
 
-El proyecto incluye un editor visual que se ejecuta por defecto. Para lanzarlo, usa este comando:
+The project includes a visual editor that runs by default. To launch it, use:
 
 ```bash
 uv run pygame-editor
 ```
 
-Esto abrirá la ventana principal, cargando la escena del editor.
+This will open the main window, loading the editor scene.
 
-### 3. Jugar al Juego
+### 3. Play the Game
 
-Dentro de la aplicación, puedes cambiar entre diferentes escenas (Editor, Juego, Test de Input) usando las siguientes teclas:
+Inside the application, you can switch between different scenes (Editor, Game, Input Test) using the following keys:
 
-*   **F2 / Tab**: Cambiar a la siguiente escena.
-*   **F1 / Shift+Tab**: Cambiar a la escena anterior.
+* **F2 / Tab**: Switch to the next scene.
+* **F1 / Shift+Tab**: Switch to the previous scene.
 
-La escena principal del juego (`MainScene`) es típicamente la primera en el ciclo, permitiéndote jugar los niveles que has creado.
+The main game scene (`MainScene`) is typically the first in the cycle, allowing you to play the levels you’ve created.
 
-## El Editor Visual
+## The Visual Editor
 
-El editor es la herramienta central para construir tu juego. Te permite:
+The editor is the core tool for building your game. It allows you to:
 
-*   **Componer Escenas**: Añade, selecciona y mueve entidades directamente en el espacio del juego.
-*   **Configurar Propiedades**: Ajusta las propiedades de cada entidad, como su sprite, comportamiento y atributos físicos.
-*   **Exportar Niveles**: Guarda tus creaciones en un archivo de composición (`.eei.json`) que el juego puede cargar.
+* **Compose Scenes**: Add, select, and move entities directly in the game space.
+* **Configure Properties**: Adjust each entity’s properties, such as its sprite, behavior, and physical attributes.
+* **Export Levels**: Save your creations to a composition file (`.eei.json`) that the game can load.
 
-[SCREENSHOT: La interfaz del editor visual, mostrando la colocación de entidades y el editor de propiedades.]
+[SCREENSHOT: The visual editor interface, showing entity placement and the properties editor.]
 
-## El Modelo Entidad-Entorno (EEI)
+## The Entity–Environment Interaction Model (EEI)
 
-El proyecto utiliza un modelo de diseño donde el juego se construye a partir de dos componentes principales:
+The project uses a design model where the game is built from two main components:
 
-*   **Entornos (`Environment`)**: Representan espacios o zonas que aplican reglas a los objetos dentro de ellos. Por ejemplo, un entorno de "gravedad" aplica una fuerza hacia abajo a todas las entidades que contiene. Los entornos se pueden anidar y sus efectos se combinan.
-*   **Entidades (`Entity`)**: Son los objetos interactivos del juego, como el jugador, los enemigos, las plataformas o los ítems. Las entidades viven dentro de los entornos y son afectadas por sus reglas.
+* **Environments (`Environment`)**: Represent spaces or zones that apply rules to the objects inside them. For example, a “gravity” environment applies a downward force to all contained entities. Environments can be nested, and their effects are combined.
+* **Entities (`Entity`)**: Interactive game objects such as the player, enemies, platforms, or items. Entities live inside environments and are affected by their rules.
 
-Este modelo permite una forma flexible y componible de construir lógicas de juego complejas.
+This model enables a flexible and composable way to build complex game logic.
 
-puedes ajustar la resolución de la pantalla, los FPS y otros ajustes generales en `game/configs/settings.toml`.
+You can adjust screen resolution, FPS, and other general settings in `game/configs/settings.toml`.
 
 ```toml
 title = "Pygame Videogame Maker"
@@ -70,32 +70,33 @@ height = 720
 fps = 60
 ```
 
-### Controles y Mandos
+### Controls and Controllers
 
-Los mapeos de los mandos se definen en `game/configs/controllers/generic.toml`. Puedes editar este archivo para adaptar el juego a diferentes gamepads sin cambiar el código.
+Controller mappings are defined in `game/configs/controllers/generic.toml`. You can edit this file to adapt the game to different gamepads without changing the code.
 
 ```toml
-# Ejemplo de mapeo de un botón
+# Example button mapping
 a = { type = "button", index = 0, label = "A" }
 ```
 
-## Despliegue en Consola
+## Console Deployment
 
-Si estás trabajando con una consola retro o un dispositivo similar, puedes usar el script de despliegue para empaquetar y transferir tu juego:
+If you’re working with a retro console or a similar device, you can use the deployment script to package and transfer your game:
 
 ```bash
 bash deploy_to_console.sh
 ```
 
-El script se encarga de empaquetar las dependencias y los assets necesarios.
+The script handles packaging dependencies and required assets.
 
-## Scripts de Utilidad
+## Utility Scripts
 
-### Optimizar Imágenes PNG
+### Optimize PNG Images
 
-El proyecto incluye un script para recortar el espacio transparente sobrante en tus sprites, optimizando su tamaño en memoria.
+The project includes a script to trim excess transparent space from your sprites, optimizing their memory footprint.
 
 ```bash
-# Recorta todas las imágenes en la carpeta de plataformas
+# Trim all images in the platforms folder
 uv run python scripts/prune_pngs.py game/assets/images/platforms/grass_platforms
 ```
+
