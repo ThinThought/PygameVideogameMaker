@@ -1885,7 +1885,6 @@ class EditorScene(Scene):
         root = Path(__file__).resolve().parents[2] / "game" / "configs" / "compositions"
         return [
             root / "editor_export.eei.json",
-            root / "demo_face.eei.json",
         ]
 
     def _initial_composition_path(self) -> Path | None:
@@ -1953,8 +1952,9 @@ class EditorScene(Scene):
             self._print_status("[Editor] No puedo saltar a MainScene desde aquí.")
             return
 
-        for idx, scene_cls in enumerate(scene_list):
-            if getattr(scene_cls, "__name__", "") == "MainScene":
+        for idx, value in enumerate(scene_list.values()):
+            print(f"Scene {idx}: {value.__name__}")
+            if value.__name__ == "MainScene":
                 self._print_status("[Editor] Ejecutando composición en MainScene...")
                 composition_path = self._composition_output_path()
                 set_scene(idx, composition_path=composition_path)

@@ -10,25 +10,22 @@ import pygame
 from game.core.audio import AudioManager
 from game.core.clock import GameClock
 from game.core.config import WindowConfig
-from game.scenes.base import Scene  # <-- asegúrate de que existe
+from game.scenes import MainScene, EditorScene, Scene
 
 from rich.console import Console
 from rich.panel import Panel
 
 console = Console()
 
-
 class HudLine(NamedTuple):
     text: str
     color: tuple[int, int, int]
     align: str = "left"  # "left" | "center" | "right"
 
-
 def _build_scenes() -> dict[str, Type[Scene]]:
     # SCENES: dict[str, Type[Scene]]
-    from game.scenes import SCENES
-    return SCENES
-
+    import game.scenes as scenes_for_app
+    return scenes_for_app.SCENES
 
 class App:
     def __init__(self, config: WindowConfig) -> None:
