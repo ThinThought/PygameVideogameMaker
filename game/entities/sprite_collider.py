@@ -5,6 +5,7 @@ from typing import ClassVar
 
 import pygame
 from game.entities.base import AppLike
+from game.core.resources import get_asset_path
 
 
 class SpriteColliderMixin:
@@ -40,14 +41,14 @@ class SpriteColliderMixin:
     # ------------------------------------------------------------------
     def on_spawn(self, app: AppLike) -> None:
         super().on_spawn(app)
-        self._sprite = self._ensure_sprite(app)
+        self._sprite = self._ensure_sprite()
 
     def on_despawn(self, app: AppLike) -> None:
         super().on_despawn(app)
         self._sprite = None
 
     def render(self, app: AppLike, screen: pygame.Surface) -> None:
-        sprite = self._sprite or self._ensure_sprite(app)
+        sprite = self._sprite or self._ensure_sprite()
         if sprite is not None:
             rect = sprite.get_rect(center=(int(self.pos.x), int(self.pos.y)))
             screen.blit(sprite, rect)
@@ -55,13 +56,13 @@ class SpriteColliderMixin:
         super().render(app, screen)
 
     # ------------------------------------------------------------------
-    def _ensure_sprite(self, app: AppLike) -> pygame.Surface | None:
+    def _ensure_sprite(self) -> pygame.Surface | None:
         key = self._cache_key()
         cached = self._surface_cache.get(key)
         if cached is not None:
             return cached
 
-        sprite = self._load_sprite(app)
+        sprite = self._load_sprite()
         if sprite is not None:
             self._surface_cache[key] = sprite
         return sprite
@@ -70,20 +71,19 @@ class SpriteColliderMixin:
         size = self.RENDER_SIZE or (-1, -1)
         return f"{self.__class__.__name__}:{self.SPRITE_PATH}:{int(size[0])}x{int(size[1])}"
 
-    def _load_sprite(self, app: AppLike) -> pygame.Surface | None:
-        path = self._resolve_asset_path(app)
+    def _load_sprite(self) -> pygame.Surface | None:
+        path = self._resolve_asset_path()
         if path is None:
             print(
                 f"[{self.__class__.__name__}] Ruta de asset inválida: {self.SPRITE_PATH!r}"
             )
             return None
 
-        if not path.exists():
+        try:
+            sprite = pygame.image.load(path).convert_alpha()
+        except FileNotFoundError:
             print(f"[{self.__class__.__name__}] Sprite no encontrado: {path}")
             return None
-
-        try:
-            sprite = pygame.image.load(path.as_posix()).convert_alpha()
         except pygame.error as exc:
             print(f"[{self.__class__.__name__}] No se pudo cargar {path}: {exc}")
             return None
@@ -96,7 +96,7 @@ class SpriteColliderMixin:
         return sprite
 
     @classmethod
-    def _resolve_asset_path(cls, app: AppLike) -> Path | None:
+    def _resolve_asset_path(cls) -> Path | None:
         if not cls.SPRITE_PATH:
             return None
 
@@ -104,16 +104,10 @@ class SpriteColliderMixin:
         if candidate.is_absolute():
             return candidate
 
-        resources = getattr(app, "resources", None)
-        if resources is not None and hasattr(resources, "path"):
-            try:
-                resolved = Path(resources.path(*candidate.parts))
-                return resolved
-            except TypeError:
-                pass
-
-        root = Path(__file__).resolve().parents[2] / "assets"
-        return root / candidate
+        try:
+            return get_asset_path(cls.SPRITE_PATH)
+        except FileNotFoundError:
+            return None
 
     # ------------------------------------------------------------------
     def _resolve_collider_offset(self) -> pygame.Vector2:
@@ -124,7 +118,6 @@ class SpriteColliderMixin:
     def _offset_from_anchor(self) -> pygame.Vector2:
         if self.RENDER_SIZE is None:
             return pygame.Vector2(0, 0)
-
         anchor = self._clamped_anchor()
         sprite_size = pygame.Vector2(self.RENDER_SIZE)
         collider_size = pygame.Vector2(self.COLLIDER_SIZE)

@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 import pygame
+from game.core.resources import get_asset_path
 
 
 class AudioManager:
-    def __init__(self, assets_dir: Path) -> None:
-        self.assets_dir = assets_dir
-        self.sfx_dir = assets_dir / "sounds"
-        self.music_dir = assets_dir / "music"
+    def __init__(self) -> None:
+        self.sfx_dir_str = "sounds"
+        self.music_dir_str = "music"
 
         self._sounds: dict[str, pygame.mixer.Sound] = {}
         self.current_music: str | None = None
@@ -31,8 +31,8 @@ class AudioManager:
         if name in self._sounds:
             return self._sounds[name]
 
-        path = self.sfx_dir / name
-        sound = pygame.mixer.Sound(path)
+        full_path = get_asset_path(f"{self.sfx_dir_str}/{name}")
+        sound = pygame.mixer.Sound(full_path)
         self._sounds[name] = sound
         return sound
 
@@ -54,8 +54,8 @@ class AudioManager:
         loop: bool = True,
         fade_ms: int = 0,
     ) -> None:
-        path = self.music_dir / name
-        pygame.mixer.music.load(path)
+        full_path = get_asset_path(f"{self.music_dir_str}/{name}")
+        pygame.mixer.music.load(full_path)
         pygame.mixer.music.set_volume(volume)
         pygame.mixer.music.play(-1 if loop else 0, fade_ms=fade_ms)
         self.current_music = name

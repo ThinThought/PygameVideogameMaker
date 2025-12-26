@@ -6,9 +6,7 @@ from typing import Sequence
 import pygame
 
 from game.environments.base import Environment, AppLike
-
-
-DEFAULT_LAYER_PATHS: tuple[str, ...] = ("images/backgrounds/bg1/bg_sky.png",)
+from game.core.resources import get_asset_path
 
 
 class BackgroundEnvironment(Environment):
@@ -28,7 +26,11 @@ class BackgroundEnvironment(Environment):
         fill_color: str | tuple[int, int, int] | tuple[int, int, int, int] = "#0b0b0f",
     ) -> None:
         self.pos = pygame.Vector2(pos) if pos is not None else pygame.Vector2(0, 0)
-        self.layers = list(layers) if layers is not None else list(DEFAULT_LAYER_PATHS)
+        DEFAULT_BACKGROUND_PATHS = [
+            str(get_asset_path("images/backgrounds/bg1/bg_sky.png")),
+        ]
+
+        self.layers = list(layers) if layers is not None else list(DEFAULT_BACKGROUND_PATHS)
         self.fill_color = fill_color
 
         self._surface: pygame.Surface | None = None
@@ -96,12 +98,11 @@ class BackgroundEnvironment(Environment):
             print(f"[BackgroundEnvironment] Ruta inválida para capa: {layer_path!r}")
             return None
 
-        if not resolved_path.exists():
+        try:
+            image = pygame.image.load(resolved_path).convert_alpha()
+        except FileNotFoundError:
             print(f"[BackgroundEnvironment] Archivo no encontrado: {resolved_path}")
             return None
-
-        try:
-            image = pygame.image.load(resolved_path.as_posix()).convert_alpha()
         except pygame.error as exc:
             print(f"[BackgroundEnvironment] No se pudo cargar {resolved_path}: {exc}")
             return None
@@ -119,15 +120,10 @@ class BackgroundEnvironment(Environment):
         if candidate.is_absolute():
             return candidate
 
-        resources = getattr(app, "resources", None)
-        if resources is not None and hasattr(resources, "path"):
-            try:
-                return Path(resources.path(*candidate.parts))
-            except TypeError:
-                pass
-
-        root = Path(__file__).resolve().parents[1] / "assets"
-        return root / candidate
+        try:
+            return get_asset_path(layer_path)
+        except FileNotFoundError:
+            return None
 
     @staticmethod
     def _coerce_color(

@@ -167,7 +167,7 @@ class EditorScene(Scene):
         self.context_menu_stage: str = "root"
         self.context_menu_stage_data: dict[str, Any] = {}
         root = Path(__file__).resolve().parents[2]
-        self._controller_cfg_path = root / "configs" / "controllers" / "generic.toml"
+        self._controller_cfg_path = root / "game" / "configs" / "controllers" / "generic.toml"
         self.controller_profile = ControllerProfile.default()
         self._vcursor_axes: tuple[int, int] = (0, 1)
         self._vcursor_primary_buttons: tuple[int, ...] = (0,)
@@ -1879,10 +1879,10 @@ class EditorScene(Scene):
         if self._composition_path is not None:
             return self._composition_path
         root = Path(__file__).resolve().parents[2]
-        return root / "configs" / "compositions" / "editor_export.eei.json"
+        return root / "game"/ "configs" / "compositions" / "editor_export.eei.json"
 
     def _composition_candidates(self) -> list[Path]:
-        root = Path(__file__).resolve().parents[2] / "configs" / "compositions"
+        root = Path(__file__).resolve().parents[2] / "game" / "configs" / "compositions"
         return [
             root / "editor_export.eei.json",
             root / "demo_face.eei.json",
@@ -1956,7 +1956,8 @@ class EditorScene(Scene):
         for idx, scene_cls in enumerate(scene_list):
             if getattr(scene_cls, "__name__", "") == "MainScene":
                 self._print_status("[Editor] Ejecutando composición en MainScene...")
-                set_scene(idx)
+                composition_path = self._composition_output_path()
+                set_scene(idx, composition_path=composition_path)
                 return
 
         self._print_status("[Editor] MainScene no está registrada en esta app.")

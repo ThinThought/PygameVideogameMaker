@@ -5,14 +5,16 @@ from pathlib import Path
 from time import perf_counter
 
 from game.compositions import CompositionRuntime, load_composition
-from game.scenes.base import Scene, AppLike
+from game.scenes.base import AppLike, Scene
 
+
+from game.core.resources import get_composition_path, get_config_path
 
 class MainScene(Scene):
     def __init__(self, composition_path: str | Path | None = None) -> None:
         self.runtime: CompositionRuntime | None = None
         self._ordered_nodes: list = []
-        self.composition_path: Path | None = self._resolve_composition_path(
+        self.composition_path: str | None = self._resolve_composition_path(
             composition_path
         )
         self._render_surface: pygame.Surface | None = None
@@ -21,6 +23,32 @@ class MainScene(Scene):
         self._node_render_times: dict[str, float] = {}
         self._scaled_surface: pygame.Surface | None = None
         self._native_resolution: bool = False
+
+    def _default_composition_path(self) -> str | None:
+        for candidate in ("editor_export.eei.json",):
+            try:
+                print(f"DEBUG: _default_composition_path - candidate: {candidate}")
+                constructed_path = f"configs/compositions/{candidate}"
+                print(f"DEBUG: _default_composition_path - constructed_path: {constructed_path}")
+                get_config_path(constructed_path)
+                return constructed_path
+            except FileNotFoundError:
+                continue
+        return None
+
+    def _resolve_composition_path(self, provided: str | Path | None) -> str | None:
+        if provided is not None:
+            provided_str = str(provided)
+            if Path(provided_str).is_absolute():
+                return provided_str
+            else:
+                try:
+                    print(f"DEBUG: _resolve_composition_path - provided_str: {provided_str}")
+                    get_config_path(provided_str)
+                    return provided_str
+                except FileNotFoundError:
+                    return self._default_composition_path()
+        return self._default_composition_path()
 
     # Replace or update handle_event to capture a key toggle (example: N key)
     def handle_event(self, app: AppLike, ev: pygame.event.Event) -> None:
@@ -154,20 +182,6 @@ class MainScene(Scene):
     def _iter_runtime_nodes(self):
         return self._ordered_nodes
 
-    def _default_composition_path(self) -> Path | None:
-        root = Path(__file__).resolve().parents[2] / "configs" / "compositions"
-        preferred = root / "editor_export.eei.json"
-        if preferred.exists():
-            return preferred
-        demo = root / "demo_face.eei.json"
-        return demo if demo.exists() else None
-
-    def _resolve_composition_path(self, provided: str | Path | None) -> Path | None:
-        if provided is not None:
-            candidate = Path(provided)
-            return candidate if candidate.exists() else None
-        return self._default_composition_path()
-
     def _ensure_render_surface(self, size: tuple[int, int]) -> pygame.Surface:
         w = max(1, int(size[0] or 0))
         h = max(1, int(size[1] or 0))
@@ -216,3 +230,4 @@ class MainScene(Scene):
             return [(_label(node_id), elapsed) for node_id, elapsed in entries[:limit]]
 
         return _top(self._node_update_times), _top(self._node_render_times)
+

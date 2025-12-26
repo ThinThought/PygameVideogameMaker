@@ -2,3 +2,5 @@ include README.md
 include LICENSE
 recursive-include game/assets *
 recursive-include game/configs *
+recursive-include game/docs *
+recursive-include game/compositions *

@@ -11,6 +11,7 @@ from game.scenes.base import Scene
 from game.compositions import load_composition
 from game.input import ControllerProfile, gather_input_actions
 from game.scenes.editor import EditorScene
+from game.core.resources import get_config_path, get_composition_path
 
 
 @dataclass
@@ -37,9 +38,8 @@ class InputTesterScene(Scene):
         self.deadzone = 0.20
 
         root = Path(__file__).resolve().parents[2]
-        self._controller_cfg_path = root / "configs" / "controllers" / "generic.toml"
-        self._composition_path = self._default_composition_path(root)
-        self._joystick_cfg_path = root / "configs" / "input_tester_joystick.json"
+        self._composition_path = self._default_composition_path()
+        self._joystick_cfg_path = root  / "game" / "configs" / "input_tester_joystick.json"
         self._snapshot_dirty = False
         self._snapshot_cooldown = 0.25  # segs entre escrituras en disco
         self._last_snapshot = time.monotonic()
@@ -520,14 +520,9 @@ class InputTesterScene(Scene):
             ty += surf.get_height() + line_gap
 
     def _load_controller_profile(self) -> None:
-        if not self._controller_cfg_path.exists():
-            self.controller_profile = ControllerProfile.default()
-            self.deadzone = self.controller_profile.deadzone
-            return
-
         try:
             self.controller_profile = ControllerProfile.from_toml(
-                self._controller_cfg_path
+                "controllers/generic.toml"
             )
         except (OSError, ValueError) as exc:
             self._push(f"No se pudo leer controller profile: {exc}")
@@ -635,10 +630,12 @@ class InputTesterScene(Scene):
         }
         return mapping.get(control.lower(), control.title())
 
-    def _default_composition_path(self, root: Path) -> Path | None:
-        comps = root / "configs" / "compositions"
+    def _default_composition_path(self) -> Path | None:
         for candidate in ("editor_export.eei.json", "demo_face.eei.json"):
-            cand_path = comps / candidate
-            if cand_path.exists():
-                return cand_path
+            try:
+                cand_path = get_composition_path(candidate)
+                if cand_path.is_file():
+                    return cand_path
+            except FileNotFoundError:
+                continue
         return None

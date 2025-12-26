@@ -23,7 +23,7 @@ class VisibleMassEntity(MassEntity):
         color: pygame.Color | str | tuple[int, int, int] = (76, 139, 245),
         outline_color: pygame.Color | str | tuple[int, int, int] = (18, 44, 92),
         label_color: pygame.Color | str | tuple[int, int, int] = (255, 255, 255),
-        size: float = 32.0,
+        size: float | tuple[float, float] | pygame.Vector2 = 32.0,
         show_velocity: bool = True,
         show_label: bool = True,
     ) -> None:
@@ -34,7 +34,13 @@ class VisibleMassEntity(MassEntity):
         self.outline_color = self._to_color(outline_color, fallback=(18, 44, 92))
         self.label_color = self._to_color(label_color, fallback=(255, 255, 255))
 
-        self.size = max(4.0, float(size))
+        if isinstance(size, (int, float)):
+            self.size = pygame.Vector2(max(4.0, size), max(4.0, size))
+        else:
+            self.size = pygame.Vector2(size)
+            self.size.x = max(4.0, self.size.x)
+            self.size.y = max(4.0, self.size.y)
+
         self.show_velocity = bool(show_velocity)
         self.show_label = bool(show_label)
 
@@ -64,7 +70,7 @@ class VisibleMassEntity(MassEntity):
 
     # ------------------------------------------------------------------
     def render(self, app: AppLike, screen: pygame.Surface) -> None:
-        rect = self._cube_rect()
+        rect = self._collider_rect()
         center = rect.center
 
         # Blindaje: si alguien pisó self.color con un str, lo re-coercemos aquí.
@@ -96,33 +102,33 @@ class VisibleMassEntity(MassEntity):
         if not platforms:
             return
 
-        cube = self._cube_rect()
-        prev_cube = self._cube_rect(self._prev_pos)
+        collider = self._collider_rect()
+        prev_collider = self._collider_rect(self._prev_pos)
 
         for platform in platforms:
             surface = pygame.Rect(platform.surface_rect())
-            if not cube.colliderect(surface):
+            if not collider.colliderect(surface):
                 continue
 
-            curr_bottom = cube.bottom
-            curr_top = cube.top
-            prev_bottom = prev_cube.bottom
-            prev_top = prev_cube.top
+            curr_bottom = collider.bottom
+            curr_top = collider.top
+            prev_bottom = prev_collider.bottom
+            prev_top = prev_collider.top
 
-            if prev_bottom <= surface.top <= curr_bottom:
-                self.pos.y = surface.top - self._half_size()
-                cube = self._cube_rect()
+            # cayendo sobre la plataforma
+            if self.velocity.y >= 0 and prev_bottom <= surface.top < curr_bottom:
+                self.pos.y = surface.top - self._half_size().y
                 if self.velocity.y > 0:
                     self.velocity.y = 0
-                    self.grounded = True
+                self.grounded = True
                 continue
 
-            if prev_top >= surface.bottom >= curr_top:
-                self.pos.y = surface.bottom + self._half_size()
-                cube = self._cube_rect()
+            # subiendo y chocando por debajo
+            if self.velocity.y < 0 and prev_top >= surface.bottom > curr_top:
+                self.pos.y = surface.bottom + self._half_size().y
                 if self.velocity.y < 0:
                     self.velocity.y = 0
-                    self.grounded = True
+                continue
 
     def _iter_sibling_platforms(self) -> Iterator[Platform]:
         runtime = self._runtime
@@ -167,18 +173,17 @@ class VisibleMassEntity(MassEntity):
         self._node_id = None
         self._environment_id = None
 
-    def _cube_rect(self, pos: pygame.Vector2 | None = None) -> pygame.Rect:
+    def _collider_rect(self, pos: pygame.Vector2 | None = None) -> pygame.Rect:
         center = pos if pos is not None else self.pos
         half = self._half_size()
-        left = center.x - half
-        top = center.y - half
-        size = int(round(self.size))
-        if size <= 0:
-            size = 1
-        return pygame.Rect(int(round(left)), int(round(top)), size, size)
+        left = center.x - half.x
+        top = center.y - half.y
+        return pygame.Rect(
+            round(left), round(top), round(self.size.x), round(self.size.y)
+        )
 
-    def _half_size(self) -> float:
-        return max(0.5, self.size * 0.5)
+    def _half_size(self) -> pygame.Vector2:
+        return self.size * 0.5
 
     def _draw_velocity(
         self,
@@ -195,7 +200,7 @@ class VisibleMassEntity(MassEntity):
         except ValueError:
             return
 
-        tip = pygame.Vector2(center) + direction * (self._half_size() + 16)
+        tip = pygame.Vector2(center) + direction * (self._half_size().length() + 16)
         pygame.draw.line(screen, outline, center, tip, 2)
 
     def _draw_mass_label(

@@ -4,7 +4,7 @@
 IP="$DEPLOY_CONSOLE_IP"
 DEPLOY_CONSOLE_USER="${DEPLOY_CONSOLE_USER:-root}"
 DEST="$DEPLOY_CONSOLE_USER@$IP:/userdata/roms/pygame"
-GAME_NAME="Pygame-Videogame-Maker"
+GAME_NAME="PygameVideogameMaker"
 
 PROJECT_DIR="."
 PROJECT_DIR_DEST="$DEST/$GAME_NAME"

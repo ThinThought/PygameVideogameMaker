@@ -42,5 +42,9 @@ include-package-data = true
 where = ["."]
 include = ["game*"]
 
+[tool.setuptools.package-data]
+"game.configs" = ["**/*.json", "**/*.toml"]
+"game.assets" = ["**/*"]
+
 [tool.setuptools.exclude-package-data]
 "*" = ["*.pyc", "*.pyo", "__pycache__/*"]
