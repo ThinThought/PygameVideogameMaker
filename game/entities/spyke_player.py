@@ -1,13 +1,33 @@
 from __future__ import annotations
-
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
-from game.entities.playable import PlayableMassEntity
-from dataclasses import dataclass
-import random
-from pathlib import Path
-from game.core.resources import get_asset_path
 import pygame
+
+from game.core.resources import get_asset_path
+from game.entities.playable import PlayableMassEntity
+
+
+@dataclass
+class JumpPhases:
+    takeoff_frame: int = 1
+    up_frame: int = 2
+    down_frame: int = 3
+    land_frame: int = 1
+    vy_threshold_px: float = 20.0
+    land_hold_s: float = 0.08
+
+
+@dataclass
+class AnimTuning:
+    idle_fps: float = 2.0
+    walk_fps: float = 12.0
+    deadzone_px: float = 5.0
+    jump: JumpPhases = JumpPhases()
+
+
+SPYKE_ANIM_TUNING = AnimTuning()
 
 
 @dataclass
@@ -16,21 +36,31 @@ class AnimClip:
     fps: float = 10.0
     loop: bool = True
 
+    # runtime
     t: float = 0.0
     idx: int = 0
+    frozen: bool = False
 
     def reset(self) -> None:
         self.t = 0.0
         self.idx = 0
+        self.frozen = False
+
+    def set_frame(self, one_based_index: int) -> None:
+        self.idx = max(0, min(one_based_index - 1, len(self.frames) - 1))
+        self.t = 0.0
+        self.frozen = True
+
+    def unfreeze(self) -> None:
+        self.frozen = False
 
     def update(self, dt: float) -> None:
-        if len(self.frames) <= 1 or self.fps <= 0:
+        if self.frozen or len(self.frames) <= 1 or self.fps <= 0:
             return
 
         self.t += dt
         frame_time = 1.0 / self.fps
 
-        # avanzar de forma robusta aunque dt venga grande
         while self.t >= frame_time:
             self.t -= frame_time
             self.idx += 1
@@ -57,7 +87,7 @@ class SpriteAnimator:
         self.scale_factor = scale_factor
         self.min_size = min_size
         self.clips: dict[str, AnimClip] = {}
-        self.state: str = "idle"
+        self.state: str | None = None
         self.facing: int = 1  # 1 derecha, -1 izquierda
 
     def load_clip(self, state: str, *, fps: float, loop: bool = True) -> None:
@@ -80,7 +110,6 @@ class SpriteAnimator:
                 f"No hay frames para estado {state!r} en {relative_folder_path}"
             )
 
-        # scaling logic...
         if self.scale_factor is not None and self.scale_factor != 1.0:
             for i in range(len(frames)):
                 surf = frames[i]
@@ -101,29 +130,42 @@ class SpriteAnimator:
 
         self.clips[state] = AnimClip(frames=frames, fps=fps, loop=loop)
 
+    @property
+    def current_clip(self) -> AnimClip | None:
+        if self.state is None:
+            return None
+        return self.clips.get(self.state)
+
     def set_state(self, state: str) -> None:
         if state == self.state:
             return
+
+        if self.state and self.current_clip:
+            self.current_clip.reset()
+
         self.state = state
-        self.clips[state].reset()
+        if self.current_clip:
+            self.current_clip.unfreeze()
 
     def update(self, dt: float) -> None:
-        self.clips[self.state].update(dt)
+        if self.current_clip:
+            self.current_clip.update(dt)
 
     def frame(self) -> pygame.Surface:
-        surf = self.clips[self.state].current()
+        clip = self.current_clip
+        if clip is None:
+            raise RuntimeError(f"Animator state {self.state!r} no es válido")
+
+        surf = clip.current()
         if self.facing < 0:
             surf = pygame.transform.flip(surf, True, False)
         return surf
 
 
 class SpykePlayer(PlayableMassEntity):
-    SPRITE_BASE = "images/pc/spyke"  # relativo a assets/
-    SPRITE_SCALE_FACTOR = 0.10  # 1.0 = 100% del tamaño original
-    COLLIDER_SIZE = (32, 60)  # tamaño para físicas
-    WALK_FPS = 12.0
-    IDLE_FPS = 6.0
-    JUMP_FPS = 10.0
+    SPRITE_BASE = "images/pc/spyke"
+    SPRITE_SCALE_FACTOR = 0.10
+    COLLIDER_SIZE = (32, 60)
 
     # cache preview por clase (barato y suficiente para editor)
     _preview_surface: pygame.Surface | None = None
@@ -139,6 +181,11 @@ class SpykePlayer(PlayableMassEntity):
         self._is_jumping = False
         self.anim: SpriteAnimator | None = None
 
+        # Animation state
+        self._anim_state: str | None = None
+        self._airborne_prev: bool = False
+        self._land_hold_timer: float = 0.0
+
     def on_spawn(self, app: Any) -> None:
         super().on_spawn(app)
 
@@ -147,12 +194,17 @@ class SpykePlayer(PlayableMassEntity):
             scale_factor=self.SPRITE_SCALE_FACTOR,
             min_size=self.COLLIDER_SIZE,
         )
-        self.anim.load_clip("idle", fps=self.IDLE_FPS, loop=True)
-        self.anim.load_clip("walk", fps=self.WALK_FPS, loop=True)
-        self.anim.load_clip("jump", fps=self.JUMP_FPS, loop=True)
+        self.anim.load_clip("idle", fps=SPYKE_ANIM_TUNING.idle_fps, loop=True)
+        self.anim.load_clip("walk", fps=SPYKE_ANIM_TUNING.walk_fps, loop=True)
+        self.anim.load_clip("jump", fps=0.0, loop=False) # Pose-based clip
+
+    def _start_jump(self) -> None:
+        super()._start_jump()
+        if self.anim:
+            self.anim.set_state("jump")
+            self.anim.current_clip.set_frame(SPYKE_ANIM_TUNING.jump.takeoff_frame)
 
     def update(self, app: Any, dt: float) -> None:
-        # --- tu lógica existente ---
         self._bind_runtime(app)
 
         grounded = bool(getattr(self, "grounded", False))
@@ -197,58 +249,77 @@ class SpykePlayer(PlayableMassEntity):
             if self.velocity.y > 0.0:
                 self.velocity.y = 0.0
 
-        # --- anim state box ---
         self._update_anim_state(dt)
-        self._update_anim_state(dt)
+        self._airborne_prev = not grounded
 
     def _update_anim_state(self, dt: float) -> None:
         if self.anim is None:
             return
 
+        # 1. Detect state transitions
         grounded = bool(getattr(self, "grounded", False))
-        vx = self.velocity.x
-        dead = 5.0  # px/s, umbral para considerar “quieto”
+        landed_this_frame = grounded and self._airborne_prev
 
-        # facing por input (mejor que por vx si hay damping)
+        if landed_this_frame:
+            self._land_hold_timer = SPYKE_ANIM_TUNING.jump.land_hold_s
+
+        # 2. Update timers
+        if self._land_hold_timer > 0:
+            self._land_hold_timer -= dt
+
+        # 3. Determine facing direction
+        vx = self.velocity.x
         if self._left and not self._right:
             self.anim.facing = -1
         elif self._right and not self._left:
             self.anim.facing = 1
-        elif abs(vx) > dead:
+        elif abs(vx) > SPYKE_ANIM_TUNING.deadzone_px:
             self.anim.facing = 1 if vx > 0 else -1
 
-        if not grounded:
+        # 4. Determine animation state and frame
+        if self._land_hold_timer > 0:
             self.anim.set_state("jump")
-        else:
-            if abs(vx) > dead:
+            self.anim.current_clip.set_frame(SPYKE_ANIM_TUNING.jump.land_frame)
+        elif not grounded:
+            self.anim.set_state("jump")
+            vy = self.velocity.y
+            jump_cfg = SPYKE_ANIM_TUNING.jump
+            if vy < -jump_cfg.vy_threshold_px:
+                self.anim.current_clip.set_frame(jump_cfg.up_frame)
+            elif vy > jump_cfg.vy_threshold_px:
+                self.anim.current_clip.set_frame(jump_cfg.down_frame)
+            else: # Apex or near-zero vy
+                self.anim.current_clip.set_frame(jump_cfg.up_frame)
+
+        else: # Grounded and not in land-hold
+            if abs(vx) > SPYKE_ANIM_TUNING.deadzone_px:
                 self.anim.set_state("walk")
             else:
                 self.anim.set_state("idle")
 
+        # 5. Update the animator with the final state
         self.anim.update(dt)
 
     def render(self, app, screen: pygame.Surface) -> None:
-        # 1) Si tenemos animación, usamos el frame actual
         if self.anim is not None:
+            # Set a default state if none is set, to prevent crashes
+            if self.anim.state is None:
+                self.anim.set_state("idle")
             frame = self.anim.frame()
         else:
-            # 2) Editor/preview: frame por defecto
             frame = self._get_editor_preview_frame(
                 app, prefer_idle=True, random_fallback=True
             )
             if frame is None:
-                # Si no hay sprite, dibujamos el collider para depurar
                 if hasattr(self, "_collider_rect"):
                     pygame.draw.rect(screen, self.color, self._collider_rect(), 2)
                 return
 
-        # Anclar el sprite a la parte inferior del colisionador de físicas
         collider_rect = self._collider_rect()
         sprite_rect = frame.get_rect(midbottom=collider_rect.midbottom)
 
         screen.blit(frame, sprite_rect)
 
-        # Opcional: dibujar el colisionador para depurar
         if self.show_collider or getattr(app, "DEBUG_COLLIDERS", False):
             pygame.draw.rect(screen, (255, 0, 0), collider_rect, 1)
 
@@ -271,7 +342,8 @@ class SpykePlayer(PlayableMassEntity):
         candidate_relative_paths: list[str] = []
         if prefer_idle:
             try:
-                get_asset_path(f"{base_asset_path_str}/idle/1.png")  # Check existence
+                # Check existence
+                get_asset_path(f"{base_asset_path_str}/idle/1.png")
                 candidate_relative_paths.append(f"{base_asset_path_str}/idle/1.png")
             except FileNotFoundError:
                 pass
