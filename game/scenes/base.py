@@ -6,6 +6,9 @@ import pygame
 class AppLike(Protocol):
     running: bool
 
+    def cycle_resolution(self) -> None:
+        ...
+
 
 class Scene:
     def on_enter(self, app: AppLike) -> None:

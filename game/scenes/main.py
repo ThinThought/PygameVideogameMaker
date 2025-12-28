@@ -59,6 +59,7 @@ class MainScene(Scene):
         # toggle native resolution on key press
         if ev.type == pygame.KEYDOWN and ev.key == pygame.K_SPACE:
             self.toggle_native_resolution()
+            app.cycle_resolution()
             return
 
         for node in self._iter_runtime_nodes():
