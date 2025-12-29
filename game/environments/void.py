@@ -7,11 +7,10 @@ from game.environments.base import Environment, AppLike
 
 class VoidEnvironment(Environment):
     """
-    Environment utilitario sin efectos para anclar subárboles EEI.
+    Utility environment with no effects, used to anchor EEI subtrees.
 
-    Funciona como contraparte del `VoidEntity`: permite colgar otros environments
-    de una entidad invisible y, opcionalmente, puede mostrarse en pantalla para
-    depurar posiciones o límites lógicos.
+    Acts as the counterpart to `VoidEntity`: it can host environments under an
+    invisible entity and can optionally render for debugging positions or bounds.
     """
 
     def __init__(
@@ -30,11 +29,11 @@ class VoidEnvironment(Environment):
         self.crosshair = bool(crosshair)
 
     def handle_event(self, app: AppLike, ev: pygame.event.Event) -> None:
-        """No procesa eventos; sirve solo como contenedor lógico."""
+        """No event handling; serves as a logical container."""
         return
 
     def update(self, app: AppLike, dt: float) -> None:
-        """No tiene lógica; solo mantiene posición/estado."""
+        """No logic; only holds position/state."""
         return
 
     def render(self, app: AppLike, screen: pygame.Surface) -> None:

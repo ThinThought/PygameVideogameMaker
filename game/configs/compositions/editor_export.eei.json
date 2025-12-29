@@ -7,34 +7,14 @@
   },
   "scene": {
     "canvas": [
-      720,
-      480
+      1024,
+      768
     ],
     "origin": [
       0,
       0
     ]
   },
-  "nodes": [
-    {
-      "id": "env-001",
-      "kind": "environment",
-      "type": "game.environments.background.BackgroundEnvironment",
-      "parent": null,
-      "transform": {
-        "position": [
-          351.66666666666663,
-          115.0
-        ]
-      },
-      "state": {
-        "layers": [
-          "/home/daiego/ThinThought/Repositories/PygameVideogameMaker/game/assets/images/backgrounds/bg1/bg_sky.png"
-        ],
-        "fill_color": "#0b0b0f"
-      },
-      "children": []
-    }
-  ],
+  "nodes": [],
   "interactions": []
 }

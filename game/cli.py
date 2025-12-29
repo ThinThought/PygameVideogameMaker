@@ -21,32 +21,32 @@ _IGNORE_PATTERNS = shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo", "*.py
 def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         prog="pygametemplate",
-        description="Ejecuta la plantilla actual o genera un nuevo proyecto desde ella.",
+        description="Run the current template or generate a new project from it.",
     )
     parser.set_defaults(func=_run_game)
     subparsers = parser.add_subparsers(dest="command")
 
     run_parser = subparsers.add_parser(
-        "run", help="Ejecuta el juego definido en la plantilla."
+        "run", help="Run the game defined by the template."
     )
     run_parser.set_defaults(func=_run_game)
 
-    editor_parser = subparsers.add_parser("editor", help="Inicia el editor del juego.")
+    editor_parser = subparsers.add_parser("editor", help="Launch the game editor.")
     editor_parser.set_defaults(func=_run_editor)
 
     new_parser = subparsers.add_parser(
         "new",
-        help="Genera un nuevo proyecto copiando los archivos de la plantilla.",
+        help="Generate a new project by copying the template files.",
     )
     new_parser.add_argument(
         "name",
-        help="Nombre del proyecto o ruta destino. Se inferirá una carpeta con ese nombre.",
+        help="Project name or destination path. A folder is inferred from this name.",
     )
     new_parser.add_argument(
         "-o",
         "--output-dir",
         default=".",
-        help="Directorio donde se creará el proyecto (por defecto el directorio actual).",
+        help="Directory where the project will be created (defaults to current).",
     )
     new_parser.set_defaults(func=_generate_project)
 
@@ -91,7 +91,7 @@ def _generate_project(args: argparse.Namespace) -> None:
 
     if destination.exists():
         raise SystemExit(
-            f"La ruta destino '{destination}' ya existe. Elige otra carpeta."
+            f"Destination path '{destination}' already exists. Choose another folder."
         )
 
     destination.mkdir(parents=True)
@@ -127,7 +127,7 @@ def _generate_project(args: argparse.Namespace) -> None:
         if destination.is_relative_to(Path.cwd())
         else destination
     )
-    print(f"Proyecto generado en: {rel_path}")
+    print(f"Project generated at: {rel_path}")
 
 
 def _resolve_destination(name: str, base_dir: str) -> Path:
@@ -145,12 +145,12 @@ def _tokenize_name(raw_name: str) -> list[str]:
 def _slugify(value: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
     if not slug:
-        raise SystemExit("No se pudo inferir un nombre válido para el proyecto.")
+        raise SystemExit("Could not infer a valid project name.")
     return slug
 
 
 def _to_display_name(tokens: list[str]) -> str:
-    return " ".join(token.capitalize() for token in tokens) if tokens else "Nuevo Juego"
+    return " ".join(token.capitalize() for token in tokens) if tokens else "New Game"
 
 
 def _to_pascal_case(tokens: list[str]) -> str:

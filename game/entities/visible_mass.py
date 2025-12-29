@@ -10,7 +10,7 @@ from game.entities.collider import Platform
 
 
 class VisibleMassEntity(MassEntity):
-    """Entidad con masa que también se dibuja para poder verla en pantalla."""
+    """Mass entity that renders so it can be seen on screen."""
 
     _label_font: ClassVar[pygame.font.Font | None] = None
 
@@ -34,7 +34,7 @@ class VisibleMassEntity(MassEntity):
         self.visible = visible
         self.show_collider = show_collider
 
-        # OJO: aquí normalizamos, pero AUN ASÍ podemos ser pisados luego por runtime/editor.
+        # Normalize now; runtime/editor can still override later.
         self.color = self._to_color(color, fallback=(76, 139, 245))
         self.outline_color = self._to_color(outline_color, fallback=(18, 44, 92))
         self.label_color = self._to_color(label_color, fallback=(255, 255, 255))
@@ -80,7 +80,7 @@ class VisibleMassEntity(MassEntity):
         rect = self._collider_rect()
         center = rect.center
 
-        # Blindaje: si alguien pisó self.color con un str, lo re-coercemos aquí.
+        # Re-coerce color if it was overwritten with a string.
         fill = self._to_color(
             getattr(self, "color", (76, 139, 245)), fallback=(76, 139, 245)
         )
@@ -258,7 +258,7 @@ class VisibleMassEntity(MassEntity):
                 )
 
             if isinstance(value, str):
-                c = pygame.Color(value)  # falla si el nombre no existe
+                c = pygame.Color(value)  # fails if the name does not exist
                 return pygame.Color(
                     cls._clamp8(c.r),
                     cls._clamp8(c.g),

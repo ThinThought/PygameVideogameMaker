@@ -9,16 +9,16 @@ from game.core.config import load_window_config
 
 def _share_path(*parts: str) -> Path:
     """
-    Devuelve la ruta a un recurso empaquetado dentro del directorio 'game'.
+    Return the path to a packaged resource inside the 'game' directory.
 
-    Usa importlib.resources para resolver la ruta de forma robusta,
-    tanto en desarrollo como en una instalación.
+    Uses importlib.resources to resolve the path robustly in both
+    development and installed environments.
     """
     return importlib.resources.files("game").joinpath(*parts)
 
 
 def main() -> None:
-    # Ahora que 'configs' está dentro del paquete 'game', lo cargamos así:
+    # Now that 'configs' lives inside the 'game' package, load it this way.
     cfg = load_window_config(_share_path("configs", "settings.toml"))
     App(cfg).run()
 

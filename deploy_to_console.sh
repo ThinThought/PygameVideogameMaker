@@ -3,19 +3,13 @@
 IP="$DEPLOY_CONSOLE_IP"
 
 if [ -z $IP ]; then
-  echo "❌ ERROR: Debes definir la variable de entorno DEPLOY_CONSOLE_IP con la IP de la consola."
+  echo "❌ ERROR: Set the DEPLOY_CONSOLE_IP environment variable to the console IP."
   DEPLOY_CONSOLE_USER="${DEPLOY_CONSOLE_USER:-root}"
-DEPLOY_GAME_NAME="${DEPLOY_CONSOLE_USER:-PygameVideogameMaker}"
-DEPLOY_DEST_DIR="${DEPLOY_DEST_DIR:-/userdata/roms/pygame}"
-DEST="$DEPLOY_CONSOLE_USER@$IP:$DEPLOY_DEST_DIR"
-GAME_NAME="$DEPLOY_GAME_NAME"
+  DEPLOY_GAME_NAME="${DEPLOY_CONSOLE_USER:-PygameVideogameMaker}"
+  DEPLOY_DEST_DIR="${DEPLOY_DEST_DIR:-/userdata/roms/pygame}"
+  DEST="$DEPLOY_CONSOLE_USER@$IP:$DEPLOY_DEST_DIR"
+  GAME_NAME="$DEPLOY_GAME_NAME"
 fi
-
-DEPLOY_CONSOLE_USER="${DEPLOY_CONSOLE_USER:-root}"
-DEPLOY_GAME_NAME="${DEPLOY_CONSOLE_USER:-PygameVideogameMaker}"
-DEPLOY_DEST_DIR="${DEPLOY_DEST_DIR:-/userdata/roms/pygame}"
-DEST="$DEPLOY_CONSOLE_USER@$IP:$DEPLOY_DEST_DIR"
-GAME_NAME="$DEPLOY_GAME_NAME"
 
 PROJECT_DIR="."
 PROJECT_DIR_DEST="$DEST/$GAME_NAME"
@@ -30,11 +24,11 @@ uv pip freeze \
   | xargs -n1 uv pip install --target vendor --no-compile
 
 
-echo "✅ vendor/ listo"
+echo "✅ vendor/ ready"
 echo "📦 Root: $PROJECT_DIR"
 echo "🎯 Dest: $PROJECT_DIR_DEST"
 
-# 1) Sincroniza el proyecto
+# 1) Sync the project
 rsync -av --delete --no-owner --no-group \
   --exclude ".venv/" \
   --exclude "__pycache__/" \

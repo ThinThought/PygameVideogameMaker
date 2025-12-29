@@ -149,7 +149,7 @@ class MainScene(Scene):
         try:
             self.runtime = load_composition(self.composition_path)
         except FileNotFoundError:
-            print(f"[MainScene] Composición no encontrada: {self.composition_path}")
+            print(f"[MainScene] Composition not found: {self.composition_path}")
             self.runtime = None
             self._ordered_nodes = []
             self._render_surface = None

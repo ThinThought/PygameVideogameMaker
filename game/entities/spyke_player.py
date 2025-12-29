@@ -68,7 +68,7 @@ class AnimClip:
 
     def current(self) -> pygame.Surface:
         if not self.frames:
-            raise RuntimeError("AnimClip sin frames")
+            raise RuntimeError("AnimClip has no frames")
         return self.frames[self.idx]
 
 
@@ -85,7 +85,7 @@ class SpriteAnimator:
         self.min_size = min_size
         self.clips: dict[str, AnimClip] = {}
         self.state: str | None = None
-        self.facing: int = 1  # 1 derecha, -1 izquierda
+        self.facing: int = 1  # 1 right, -1 left
 
     def load_clip(self, state: str, *, fps: float, loop: bool = True) -> None:
         relative_folder_path = Path(self.base_asset_path_str) / state
@@ -104,7 +104,7 @@ class SpriteAnimator:
 
         if not frames:
             raise FileNotFoundError(
-                f"No hay frames para estado {state!r} en {relative_folder_path}"
+                f"No frames found for state {state!r} in {relative_folder_path}"
             )
 
         if self.scale_factor is not None and self.scale_factor != 1.0:
@@ -141,8 +141,8 @@ class SpriteAnimator:
 
         clip = self.current_clip
         if clip:
-            clip.reset()  # arranca limpio
-            clip.unfreeze()  # por si venía congelado
+            clip.reset()
+            clip.unfreeze()
 
     def update(self, dt: float) -> None:
         if self.current_clip:
@@ -151,7 +151,7 @@ class SpriteAnimator:
     def frame(self) -> pygame.Surface:
         clip = self.current_clip
         if clip is None:
-            raise RuntimeError(f"Animator state {self.state!r} no es válido")
+            raise RuntimeError(f"Animator state {self.state!r} is not valid")
 
         surf = clip.current()
         if self.facing < 0:
@@ -164,7 +164,7 @@ class SpykePlayer(PlayableMassEntity):
     DEFAULT_SPRITE_SCALE_FACTOR = 0.08
     DEFAULT_COLLIDER_SIZE = (32, 60)
 
-    # cache preview por clase (barato y suficiente para editor)
+    # Per-class preview cache (cheap and enough for editor)
     _preview_surface: pygame.Surface | None = None
     _preview_loaded: bool = False
 
@@ -194,7 +194,7 @@ class SpykePlayer(PlayableMassEntity):
         self._airborne_prev: bool = False
         self._land_hold_timer: float = 0.0
 
-        # NEW: “fuerza del jugador” (intención) para idle/walk
+        # Player intent used for idle/walk
         self._driving_x: bool = False
 
     def on_spawn(self, app: Any) -> None:

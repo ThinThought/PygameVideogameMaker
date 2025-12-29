@@ -10,7 +10,7 @@ from game.environments.base import Environment, AppLike
 
 class ForceEnvironment(Environment):
     """
-    Propaga una fuerza constante (p.ej. gravedad) a sus entidades hijas con masa.
+    Propagates a constant force (e.g., gravity) to child mass entities.
     """
 
     def __init__(
@@ -49,7 +49,7 @@ class ForceEnvironment(Environment):
             self._force_vec = pygame.Vector2(0, 0)
 
         for entity in self._iter_child_mass_entities():
-            # magnitude = m/s² (9.81) y direction normalizada
+            # magnitude = m/s² (9.81) and direction normalized
             entity.apply_acceleration(self._direction * self.magnitude)
             if self.auto_integrate:
                 entity.integrate(dt)

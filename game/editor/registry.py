@@ -11,7 +11,7 @@ Factory = Callable[[pygame.Vector2], Any]
 
 @dataclass(frozen=True)
 class PaletteItem:
-    """Metadata de un elemento de la paleta del editor."""
+    """Metadata for an editor palette item."""
 
     name: str
     factory: Factory
@@ -19,7 +19,7 @@ class PaletteItem:
 
 
 class PaletteRegistry:
-    """Agrupa tipos disponibles de entidades y entornos."""
+    """Groups available entity and environment types."""
 
     def __init__(
         self,

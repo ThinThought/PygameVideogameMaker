@@ -7,11 +7,10 @@ from game.entities.base import Entity, AppLike
 
 class VoidEntity(Entity):
     """
-    Entidad utilitaria sin comportamiento que actúa como ancla de otros environments.
+    Utility entity with no behavior that anchors other environments.
 
-    Su objetivo es permitir que el árbol EEI intercale nodos `entity → environment`
-    sin necesidad de crear entidades visibles. Opcionalmente puede dibujarse para
-    depurar posiciones en pantalla.
+    It allows the EEI tree to interleave `entity → environment` nodes without
+    creating visible entities. It can optionally render to debug positions.
     """
 
     def __init__(

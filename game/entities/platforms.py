@@ -10,10 +10,10 @@ from game.entities.sprite_collider import SpriteColliderMixin
 
 class SpritePlatform(SpriteColliderMixin, Platform):
     """
-    Plataforma basada en sprite que reutiliza la lógica de colisión de Platform.
+    Sprite-based platform that reuses Platform collision logic.
 
-    Define `SPRITE_PATH`, `RENDER_SIZE` y `COLLIDER_SIZE` para configurar la
-    imagen asociada y dejar el collider dentro del sprite.
+    Define `SPRITE_PATH`, `RENDER_SIZE`, and `COLLIDER_SIZE` to configure the
+    associated image and keep the collider inside the sprite.
     """
 
     SPRITE_PATH: ClassVar[str] = ""
@@ -31,7 +31,7 @@ class SpritePlatform(SpriteColliderMixin, Platform):
 
 
 class GrassSmallPlatform(SpritePlatform):
-    """Plataforma corta de pasto."""
+    """Short grass platform."""
 
     SPRITE_PATH = "images/platforms/grass_platforms/small1.png"
     RENDER_SIZE = (192, 60)
@@ -48,7 +48,7 @@ class GrassSmallPlatform(SpritePlatform):
 
 
 class GrassWidePlatform(SpritePlatform):
-    """Plataforma mediana con vegetación."""
+    """Medium grass platform."""
 
     SPRITE_PATH = "images/platforms/grass_platforms/medium1.png"
     RENDER_SIZE = (256, 72)
@@ -65,7 +65,7 @@ class GrassWidePlatform(SpritePlatform):
 
 
 class GrassLargePlatform(SpritePlatform):
-    """Plataforma larga ideal para secciones horizontales."""
+    """Long platform for horizontal sections."""
 
     SPRITE_PATH = "images/platforms/grass_platforms/large2.png"
     RENDER_SIZE = (320, 84)
@@ -81,7 +81,7 @@ class GrassLargePlatform(SpritePlatform):
         super().__init__(pos, show_collider=show_collider, **platform_kwargs)
 
 class GrassFloorPlatform(SpritePlatform):
-    """Segmento amplio que puede actuar como piso base."""
+    """Wide segment that can act as a base floor."""
 
     SPRITE_PATH = "images/platforms/grass_platforms/floor.png"
     RENDER_SIZE = (720, 480)

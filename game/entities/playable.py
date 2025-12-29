@@ -165,7 +165,7 @@ class PlayableMassEntity(VisibleMassEntity, SpriteColliderMixin):
                 self._jump_pressed = False
                 self._stop_jump_early()
 
-        # 🎮 Botón salto
+        # 🎮 Jump button
         elif ev.type == pygame.JOYBUTTONDOWN:
             if ev.button == 4:
                 self._jump_pressed = True

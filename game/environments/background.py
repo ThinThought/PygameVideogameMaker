@@ -11,11 +11,11 @@ from game.core.resources import get_asset_path
 
 class BackgroundEnvironment(Environment):
     """
-    Environment que compone una imagen de fondo a partir de varias capas.
+    Environment that composes a background image from multiple layers.
 
     Cada capa es una ruta relativa dentro de `assets/` y se mezcla en orden.
-    La superficie resultante se inicializa con las dimensiones iniciales de la
-    escena y se reescala automáticamente si el viewport cambia.
+    It can render as a movable node (uses `pos`) and accepts an editable `size`
+    or an optional target size for rescaling layers.
     """
 
     def __init__(
@@ -24,6 +24,7 @@ class BackgroundEnvironment(Environment):
         *,
         layers: Sequence[str] | None = None,
         fill_color: str | tuple[int, int, int] | tuple[int, int, int, int] = "#0b0b0f",
+        target_size: tuple[int, int] | None = None,
     ) -> None:
         self.pos = pygame.Vector2(pos) if pos is not None else pygame.Vector2(0, 0)
         DEFAULT_BACKGROUND_PATHS = [
@@ -34,9 +35,16 @@ class BackgroundEnvironment(Environment):
             list(layers) if layers is not None else list(DEFAULT_BACKGROUND_PATHS)
         )
         self.fill_color = fill_color
+        self.target_size = target_size
+        if target_size is not None:
+            self.size = pygame.Vector2(target_size)
+        else:
+            self.size = pygame.Vector2(0, 0)
 
         self._surface: pygame.Surface | None = None
         self._surface_size: tuple[int, int] | None = None
+        self._layer_size: tuple[int, int] | None = None
+        self._layer_probe_path: str | None = None
 
     def on_spawn(self, app: AppLike) -> None:
         size = self._initial_scene_size(app)
@@ -47,13 +55,27 @@ class BackgroundEnvironment(Environment):
         self._surface_size = None
 
     def render(self, app: AppLike, screen: pygame.Surface) -> None:
-        if self._surface is None or self._surface_size != screen.get_size():
-            self._compose_background(app, screen.get_size())
+        desired_size = self._desired_surface_size(app, screen)
+        if self._surface is None or self._surface_size != desired_size:
+            self._compose_background(app, desired_size)
 
         if self._surface is None:
             return
 
-        screen.blit(self._surface, (0, 0))
+        screen.blit(self._surface, (int(self.pos.x), int(self.pos.y)))
+
+    def _desired_surface_size(
+        self, app: AppLike, screen: pygame.Surface
+    ) -> tuple[int, int]:
+        if self.size.x > 0 and self.size.y > 0:
+            return (int(self.size.x), int(self.size.y))
+        if self.target_size is not None:
+            return self.target_size
+        if self.layers:
+            if self._layer_size is not None and self._layer_probe_path == self.layers[0]:
+                return self._layer_size
+            return screen.get_size()
+        return self._initial_scene_size(app)
 
     def _initial_scene_size(self, app: AppLike) -> tuple[int, int]:
         viewport_fn = getattr(app, "scene_viewport", None)
@@ -78,26 +100,53 @@ class BackgroundEnvironment(Environment):
             self._surface_size = None
             return
 
-        composed = pygame.Surface(size, pygame.SRCALPHA)
+        layer_iter = iter(self.layers)
+        first_surface: pygame.Surface | None = None
+        if (
+            self.target_size is None
+            and self.size.x <= 0
+            and self.size.y <= 0
+            and self.layers
+        ):
+            first_path = next(layer_iter, None)
+            if first_path is not None:
+                first_surface = self._load_layer(first_path, app, None)
+                if first_surface is not None:
+                    target_size = first_surface.get_size()
+                    self._layer_size = target_size
+                    self._layer_probe_path = first_path
+                    width, height = target_size
+                else:
+                    self._layer_size = None
+                    self._layer_probe_path = None
+
+        composed = pygame.Surface((width, height), pygame.SRCALPHA)
         color = self._coerce_color(self.fill_color)
         if color is not None:
             composed.fill(color)
 
-        for layer_path in self.layers:
-            layer_surface = self._load_layer(layer_path, app, size)
+        if first_surface is not None:
+            if first_surface.get_size() != (width, height):
+                first_surface = pygame.transform.smoothscale(
+                    first_surface, (width, height)
+                )
+            composed.blit(first_surface, (0, 0))
+
+        for layer_path in layer_iter:
+            layer_surface = self._load_layer(layer_path, app, (width, height))
             if layer_surface is None:
                 continue
             composed.blit(layer_surface, (0, 0))
 
         self._surface = composed.convert_alpha()
-        self._surface_size = size
+        self._surface_size = (width, height)
 
     def _load_layer(
-        self, layer_path: str, app: AppLike, size: tuple[int, int]
+        self, layer_path: str, app: AppLike, size: tuple[int, int] | None
     ) -> pygame.Surface | None:
         resolved_path = self._resolve_layer_path(app, layer_path)
         if resolved_path is None:
-            print(f"[BackgroundEnvironment] Ruta inválida para capa: {layer_path!r}")
+            print(f"[BackgroundEnvironment] Invalid layer path: {layer_path!r}")
             return None
 
         try:
@@ -106,10 +155,10 @@ class BackgroundEnvironment(Environment):
             print(f"[BackgroundEnvironment] Archivo no encontrado: {resolved_path}")
             return None
         except pygame.error as exc:
-            print(f"[BackgroundEnvironment] No se pudo cargar {resolved_path}: {exc}")
+            print(f"[BackgroundEnvironment] Failed to load {resolved_path}: {exc}")
             return None
 
-        if image.get_size() != size:
+        if size is not None and image.get_size() != size:
             image = pygame.transform.smoothscale(image, size)
 
         return image
@@ -137,5 +186,5 @@ class BackgroundEnvironment(Environment):
             color = pygame.Color(value)
             return (color.r, color.g, color.b, color.a)
         except (ValueError, TypeError):
-            print(f"[BackgroundEnvironment] Color inválido: {value!r}")
+            print(f"[BackgroundEnvironment] Invalid color: {value!r}")
             return None

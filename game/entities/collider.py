@@ -11,12 +11,12 @@ from game.entities.base import Entity, AppLike
 
 class ColliderEntity(Entity):
     """
-    Entidad invisible que representa una zona rectangular del escenario.
+    Invisible entity representing a rectangular area of the scene.
 
-    - Se registra automáticamente en el entorno que la contiene.
-    - No permite que colliders de distinta clase se solapen.
-    - Los colliders de la misma clase se agrupan en un único rectángulo de
-      cobertura para que puedan comportarse como una sola plataforma.
+    - Automatically registers in the environment that contains it.
+    - Prevents colliders of different classes from overlapping.
+    - Colliders of the same class are grouped into a single coverage rect
+      so they can behave as one platform.
     """
 
     _spaces: weakref.WeakKeyDictionary[Any, _ColliderSpace] = (
@@ -110,7 +110,7 @@ class ColliderEntity(Entity):
     # ------------------------------------------------------------------
     @property
     def rect(self) -> pygame.Rect:
-        """Devuelve el rectángulo base del collider (en píxeles)."""
+        """Return the collider base rect (in pixels)."""
         half = self.size * 0.5
         center = self.pos + self._collider_offset
         top_left = center - half
@@ -123,9 +123,9 @@ class ColliderEntity(Entity):
     @property
     def coverage_rect(self) -> pygame.Rect:
         """
-        Rectángulo combinado con otros colliders de la misma clase.
+        Combined rect with other colliders of the same class.
 
-        Si no hay vecinos, coincide con rect.
+        If there are no neighbors, it matches rect.
         """
         if self._group_rect is None:
             return self.rect
@@ -136,8 +136,8 @@ class ColliderEntity(Entity):
 
     def notify_bounds_changed(self) -> None:
         """
-        Recalcula restricciones tras modificar tamaño/posición.
-        Debe llamarse cuando se cambian manualmente pos o size.
+        Recompute constraints after size/position changes.
+        Call this when pos or size are changed manually.
         """
         if self._space:
             self._space.revalidate(self)
@@ -260,11 +260,10 @@ class ColliderEntity(Entity):
 
 class Platform(ColliderEntity):
     """
-    Collider especializado en modelar plataformas.
+    Collider specialized for platforms.
 
-    Por defecto es invisible pero puede mostrar su zona de contacto si
-    `visible=True`. Utiliza coverage_rect como superficie efectiva, por lo
-    que varias plataformas iguales pueden fusionarse.
+    Invisible by default, but can show its contact zone with `visible=True`.
+    Uses coverage_rect as the effective surface, so similar platforms can merge.
     """
 
     def __init__(
@@ -289,13 +288,13 @@ class Platform(ColliderEntity):
         self.grip = max(0.0, float(grip))
 
     def surface_rect(self) -> pygame.Rect:
-        """Devuelve el área útil final de la plataforma."""
+        """Return the final usable area of the platform."""
         return self.coverage_rect
 
 
 class _ColliderSpace:
     """
-    Gestiona los colliders que cuelgan de un mismo entorno.
+    Manages colliders hanging from the same environment.
     """
 
     def __init__(self) -> None:

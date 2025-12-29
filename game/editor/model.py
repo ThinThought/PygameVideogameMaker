@@ -39,7 +39,7 @@ class Node:
 
 
 class EditorModel:
-    """Modelo jerárquico al estilo Godot para entornos/entidades."""
+    """Godot-style hierarchical model for environments/entities."""
 
     def __init__(self, registry: PaletteRegistry) -> None:
         self.registry = registry
@@ -60,7 +60,7 @@ class EditorModel:
     def _reset_state(self) -> None:
         self._initialize_state()
 
-    # ---------- Creación ----------
+    # ---------- Creation ----------
 
     def spawn_from_palette(
         self,
@@ -241,7 +241,9 @@ class EditorModel:
             yield node
 
     def iter_tree(self) -> Iterable[tuple[int, Node]]:
-        """DFS that yields (depth, node) desde la raíz."""
+        """DFS that yields (depth, node) from the root."""
+
+        order_index = {node_id: idx for idx, node_id in enumerate(self._order)}
 
         def _visit(node_id: int, depth: int) -> Iterable[tuple[int, Node]]:
             node = self.nodes.get(node_id)
@@ -249,7 +251,10 @@ class EditorModel:
                 return []
 
             yield (depth, node)
-            for child_id in node.children:
+            children = sorted(
+                node.children, key=lambda cid: order_index.get(cid, -1)
+            )
+            for child_id in children:
                 yield from _visit(child_id, depth + 1)
 
         yield from _visit(self.root_id, 0)
@@ -279,15 +284,17 @@ class EditorModel:
         node = self.nodes.get(node_id)
         if node is None:
             return []
+        order_index = {node_id: idx for idx, node_id in enumerate(self._order)}
+        children = sorted(node.children, key=lambda cid: order_index.get(cid, -1))
         labels: list[str] = []
-        for child_id in node.children:
+        for child_id in children:
             child = self.nodes.get(child_id)
             if child is None:
                 continue
             labels.append(child.name)
         return labels
 
-    # ---------- Selección / Movimiento ----------
+    # ---------- Selection / Movement ----------
 
     def select_node(self, node_id: int | None) -> None:
         if node_id is None or node_id not in self.nodes:
@@ -336,7 +343,7 @@ class EditorModel:
         pos.y = max(top, min(bottom, desired.y))
 
     def move_up(self, node_id: int) -> None:
-        """Mueve un nodo hacia adelante en el orden de renderizado (más tarde)."""
+        """Move a node forward in render order (later)."""
         if node_id not in self._order:
             return
         idx = self._order.index(node_id)
@@ -345,7 +352,7 @@ class EditorModel:
             self._order.insert(idx + 1, node_id)
 
     def move_down(self, node_id: int) -> None:
-        """Mueve un nodo hacia atrás en el orden de renderizado (antes)."""
+        """Move a node back in render order (earlier)."""
         if node_id not in self._order:
             return
         idx = self._order.index(node_id)
@@ -353,7 +360,7 @@ class EditorModel:
             self._order.pop(idx)
             self._order.insert(idx - 1, node_id)
 
-    # ---------- Eliminación ----------
+    # ---------- Deletion ----------
 
     def delete_selected(self) -> None:
         node = self.selected_node()
@@ -387,7 +394,7 @@ class EditorModel:
     # ---------- Export / Persistencia ----------
 
     def load_from_runtime(self, runtime: CompositionRuntime) -> None:
-        """Reconstruye el árbol del editor a partir de una composición ya cargada."""
+        """Rebuild the editor tree from a loaded composition."""
         self._reset_state()
 
         comp_to_local: dict[str, int] = {}

@@ -7,11 +7,11 @@ from game.environments.base import Environment, AppLike
 
 class MusicEnvironment(Environment):
     """
-    Environment que solo gestiona música de fondo.
+    Environment that only manages background music.
 
-    - Al entrar en escena reproduce una pista.
-    - Al salir detiene la música.
-    - No renderiza nada en pantalla.
+    - Plays a track on spawn.
+    - Stops music on despawn.
+    - Renders nothing.
     """
 
     def __init__(
@@ -24,7 +24,7 @@ class MusicEnvironment(Environment):
         fade_ms: int = 0,
         stop_fade_ms: int | None = None,
     ) -> None:
-        # Environments se instancian con una posición por defecto desde el loader.
+        # Environments are instantiated with a default position by the loader.
         self.pos = pygame.Vector2(pos) if pos is not None else pygame.Vector2(0, 0)
         resolved_track = track if isinstance(track, str) else "demo.mp3"
         self.track = resolved_track
@@ -36,7 +36,7 @@ class MusicEnvironment(Environment):
         self._active = False
 
     def on_spawn(self, app: AppLike) -> None:
-        """Empieza a reproducir la pista configurada."""
+        """Starts playing the configured track."""
         track = (
             self.track
             if isinstance(self.track, str) and self.track
@@ -44,7 +44,7 @@ class MusicEnvironment(Environment):
         )
         if not isinstance(self.track, str):
             print(
-                "[MusicEnvironment] Track inválido en composición. Usando valor por defecto."
+                "[MusicEnvironment] Invalid track in composition. Using default."
             )
         app.audio.play_music(
             track,
@@ -55,20 +55,20 @@ class MusicEnvironment(Environment):
         self._active = True
 
     def on_despawn(self, app: AppLike) -> None:
-        """Detiene la música cuando se retira del árbol."""
+        """Stops music when removed from the tree."""
         if not self._active:
             return
         app.audio.stop_music(fade_ms=self.stop_fade_ms)
         self._active = False
 
     def handle_event(self, app: AppLike, ev: pygame.event.Event) -> None:
-        """No maneja eventos (placeholder para compatibilidad)."""
+        """No event handling (placeholder for compatibility)."""
         return
 
     def update(self, app: AppLike, dt: float) -> None:
-        """No necesita lógica de actualización."""
+        """No update logic needed."""
         return
 
     def render(self, app: AppLike, screen: pygame.Surface) -> None:
-        """No renderiza nada en pantalla."""
+        """Renders nothing."""
         return

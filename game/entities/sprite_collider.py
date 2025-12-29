@@ -10,16 +10,16 @@ from game.core.resources import get_asset_path
 
 class SpriteColliderMixin:
     """
-    Mezcla utilitaria para entidades con sprite + collider rectangular.
+    Utility mixin for entities with a sprite + rectangular collider.
 
-    Calcula automáticamente el `collider_offset` para que el rectángulo quede
-    dentro del sprite y gestiona la carga/cacheo del recurso visual.
+    Automatically computes `collider_offset` so the rect sits inside the sprite,
+    and handles loading/caching the visual asset.
     """
 
     SPRITE_PATH: ClassVar[str] = ""
     RENDER_SIZE: ClassVar[tuple[int, int] | None] = None
     COLLIDER_SIZE: ClassVar[pygame.Vector2] = pygame.Vector2(200, 32)
-    # (0,0) => esquina superior izquierda, (1,1) => esquina inferior derecha.
+    # (0,0) => top-left corner, (1,1) => bottom-right corner.
     COLLIDER_ANCHOR: ClassVar[tuple[float, float]] = (0.5, 1.0)
     COLLIDER_OFFSET: ClassVar[pygame.Vector2 | tuple[float, float] | None] = None
     _surface_cache: ClassVar[dict[str, pygame.Surface]] = {}
@@ -75,17 +75,17 @@ class SpriteColliderMixin:
         path = self._resolve_asset_path()
         if path is None:
             print(
-                f"[{self.__class__.__name__}] Ruta de asset inválida: {self.SPRITE_PATH!r}"
+                f"[{self.__class__.__name__}] Invalid asset path: {self.SPRITE_PATH!r}"
             )
             return None
 
         try:
             sprite = pygame.image.load(path).convert_alpha()
         except FileNotFoundError:
-            print(f"[{self.__class__.__name__}] Sprite no encontrado: {path}")
+            print(f"[{self.__class__.__name__}] Sprite not found: {path}")
             return None
         except pygame.error as exc:
-            print(f"[{self.__class__.__name__}] No se pudo cargar {path}: {exc}")
+            print(f"[{self.__class__.__name__}] Failed to load {path}: {exc}")
             return None
 
         if self.RENDER_SIZE is not None:

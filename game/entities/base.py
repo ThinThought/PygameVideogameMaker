@@ -6,36 +6,36 @@ import pygame
 
 
 class AppLike(Protocol):
-    """Lo mínimo que una entidad puede necesitar del mundo."""
+    """The minimal interface an entity may need from the world."""
 
     pass
 
 
 class Entity:
     """
-    Unidad básica del juego.
+    Basic unit of the game.
 
-    - No conoce escenas
-    - No conoce input directamente
-    - No gestiona el loop
+    - Does not know about scenes
+    - Does not handle input directly
+    - Does not manage the loop
     """
 
     def on_spawn(self, app: AppLike) -> None:
-        """Se llama cuando la entidad entra en escena."""
+        """Called when the entity enters the scene."""
         pass
 
     def on_despawn(self, app: AppLike) -> None:
-        """Se llama cuando la entidad sale de escena."""
+        """Called when the entity leaves the scene."""
         pass
 
     def handle_event(self, app: AppLike, ev: pygame.event.Event):
-        """propagar el evento a la entidad"""
+        """Propagate the event to the entity."""
         pass
 
     def update(self, app: AppLike, dt: float) -> None:
-        """Lógica por frame."""
+        """Per-frame logic."""
         pass
 
     def render(self, app: AppLike, screen: pygame.Surface) -> None:
-        """Dibujo."""
+        """Rendering."""
         pass

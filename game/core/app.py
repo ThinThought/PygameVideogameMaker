@@ -65,7 +65,7 @@ class App:
         self.scenes: dict[str, Type[Scene]] = _build_scenes()
         self._scene_ids: list[str] = list(self.scenes.keys())
 
-        # índice numérico para “ciclar”
+        # Numeric index for cycling
         self._scene_index: int = 0
         if "main" in self.scenes:
             self._scene_index = self._scene_ids.index("main")
@@ -74,7 +74,7 @@ class App:
 
         console.print(Panel.fit("✅ Pygame initialized", border_style="green"))
         console.print(
-            Panel.fit("F1/F2 o TAB/SHIFT+TAB: cambiar escena", border_style="cyan")
+            Panel.fit("F1/F2 or TAB/SHIFT+TAB: switch scene", border_style="cyan")
         )
 
         # HUD

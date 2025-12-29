@@ -43,7 +43,7 @@ class InputTesterScene(Scene):
             root / "game" / "configs" / "input_tester_joystick.json"
         )
         self._snapshot_dirty = False
-        self._snapshot_cooldown = 0.25  # segs entre escrituras en disco
+        self._snapshot_cooldown = 0.25  # secs between disk writes
         self._last_snapshot = time.monotonic()
         self.controller_profile: ControllerProfile | None = None
         self._action_dictionary: dict[str, list] = {"entities": [], "editor": []}
@@ -74,7 +74,7 @@ class InputTesterScene(Scene):
         else:
             self._push("No joystick found (ok on some devices).")
 
-        # fuentes se crean en render porque dependen de tamaño de pantalla (relativo)
+        # Fonts are created on render because they depend on screen size.
         self.font = None
         self.small = None
         self._render_action_surface()
@@ -146,7 +146,7 @@ class InputTesterScene(Scene):
         try:
             self._joystick_cfg_path.write_text(json.dumps(snapshot, indent=2))
         except OSError as exc:
-            self._push(f"No se pudo guardar joystick en configs: {exc}")
+            self._push(f"Failed to save joystick config: {exc}")
         else:
             self._snapshot_dirty = False
             self._last_snapshot = time.monotonic()
@@ -238,7 +238,7 @@ class InputTesterScene(Scene):
         w, h = screen.get_size()
         m = min(w, h)
 
-        # Helpers relativos
+        # Relative helpers
         def px(rx: float) -> int:
             return int(w * rx)
 
@@ -248,7 +248,7 @@ class InputTesterScene(Scene):
         def ps(rs: float) -> int:
             return max(1, int(m * rs))
 
-        # Fonts relativas (solo si cambia tamaño)
+        # Relative fonts (only if size changes)
         big_size = ps(0.06)
         small_size = ps(0.05)
         if (
@@ -266,12 +266,12 @@ class InputTesterScene(Scene):
 
         screen.fill((10, 10, 10))
 
-        # Layout relativo
+        # Relative layout
         pad_x = px(0.03)
         pad_y = py(0.03)
         gutter = px(0.03)
 
-        left_w = px(0.45)  # panel principal
+        left_w = px(0.45)  # main panel
         right_x = pad_x + left_w + gutter
         right_w = w - right_x - pad_x
 
@@ -294,16 +294,12 @@ class InputTesterScene(Scene):
             y += int(f.get_height() * 1.3)
 
         def bar(label: str, value: float, bx: int, by: int, bw: int, bh: int) -> None:
-            # clamp
             v = max(-1.0, min(1.0, value))
-            # fondo
             pygame.draw.rect(
                 screen, (55, 55, 55), (bx, by, bw, bh), border_radius=ps(0.010)
             )
-            # centro
             mid = bx + bw // 2
             pygame.draw.line(screen, (110, 110, 110), (mid, by), (mid, by + bh), 1)
-            # relleno
             fill = int((v + 1.0) * 0.5 * bw)
             pygame.draw.rect(
                 screen, (200, 200, 80), (bx, by, fill, bh), border_radius=ps(0.010)
@@ -346,7 +342,7 @@ class InputTesterScene(Scene):
 
             y += py(0.01)
 
-            # Axes con barritas relativas
+            # Axes with relative bars
             if info.axes:
                 max_axes_to_show = 8
                 axes_to_show = min(info.axes, max_axes_to_show)
@@ -360,13 +356,11 @@ class InputTesterScene(Scene):
                     if abs(v) < self.deadzone:
                         v = 0.0
 
-                    # label
                     label = f"{self._controller_axis_label(a)}: {v:+.3f}"
                     surf = self.small.render(label, True, (220, 220, 220))
                     screen.blit(surf, (pad_x, y))
                     y += surf.get_height() + label_gap
 
-                    # bar
                     bx = pad_x
                     by = y
                     bar(label, v, bx, by, bar_w, bar_h)
@@ -527,7 +521,7 @@ class InputTesterScene(Scene):
                 "controllers/generic.toml"
             )
         except (OSError, ValueError) as exc:
-            self._push(f"No se pudo leer controller profile: {exc}")
+            self._push(f"Failed to read controller profile: {exc}")
             self.controller_profile = ControllerProfile.default()
         self.deadzone = self.controller_profile.deadzone
 
