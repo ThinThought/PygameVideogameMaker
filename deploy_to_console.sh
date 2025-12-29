@@ -1,10 +1,21 @@
 #!/usr/bin/env sh
 
-: "${DEPLOY_CONSOLE_IP:?Define DEPLOY_CONSOLE_IP con la IP de la consola de destino}"
 IP="$DEPLOY_CONSOLE_IP"
+
+if [ -z $IP ]; then
+  echo "❌ ERROR: Debes definir la variable de entorno DEPLOY_CONSOLE_IP con la IP de la consola."
+  DEPLOY_CONSOLE_USER="${DEPLOY_CONSOLE_USER:-root}"
+DEPLOY_GAME_NAME="${DEPLOY_CONSOLE_USER:-PygameVideogameMaker}"
+DEPLOY_DEST_DIR="${DEPLOY_DEST_DIR:-/userdata/roms/pygame}"
+DEST="$DEPLOY_CONSOLE_USER@$IP:$DEPLOY_DEST_DIR"
+GAME_NAME="$DEPLOY_GAME_NAME"
+fi
+
 DEPLOY_CONSOLE_USER="${DEPLOY_CONSOLE_USER:-root}"
-DEST="$DEPLOY_CONSOLE_USER@$IP:/userdata/roms/pygame"
-GAME_NAME="PygameVideogameMaker"
+DEPLOY_GAME_NAME="${DEPLOY_CONSOLE_USER:-PygameVideogameMaker}"
+DEPLOY_DEST_DIR="${DEPLOY_DEST_DIR:-/userdata/roms/pygame}"
+DEST="$DEPLOY_CONSOLE_USER@$IP:$DEPLOY_DEST_DIR"
+GAME_NAME="$DEPLOY_GAME_NAME"
 
 PROJECT_DIR="."
 PROJECT_DIR_DEST="$DEST/$GAME_NAME"

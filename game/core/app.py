@@ -47,7 +47,12 @@ class App:
         self.joy_buttons_down: set[int] = set()
 
         pygame.display.set_caption(self.cfg.title)
-        self.screen = pygame.display.set_mode((self.cfg.width, self.cfg.height))
+        self.screen_flags = 0
+        if self.cfg.resizable:
+            self.screen_flags |= pygame.RESIZABLE
+        self.screen = pygame.display.set_mode(
+            (self.cfg.width, self.cfg.height), self.screen_flags
+        )
 
         self.clock = GameClock(self.cfg.fps)
 
@@ -160,6 +165,15 @@ class App:
     def prev_scene(self) -> None:
         self.cycle_scene(-1)
 
+    def cycle_resolution(self) -> None:
+        if self.scene is None:
+            return
+
+        # Check if the scene has a method to toggle native resolution
+        toggler = getattr(self.scene, "toggle_native_resolution", None)
+        if callable(toggler):
+            toggler()
+
     # --- HUD -------------------------------------------------------------
     def _apply_hud_visibility(self, visible: bool) -> None:
         if self.hud_visible == visible:
@@ -225,6 +239,11 @@ class App:
             for ev in pygame.event.get():
                 if ev.type == pygame.QUIT:
                     self.running = False
+                    continue
+
+                if ev.type == pygame.VIDEORESIZE:
+                    if self.scene:
+                        self.scene.on_window_resize(ev.size)
                     continue
 
                 self._track_last_input(ev)

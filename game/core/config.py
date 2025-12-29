@@ -9,6 +9,7 @@ class WindowConfig:
     height: int
     title: str
     fps: int
+    resizable: bool
 
 
 def load_window_config(path: Path) -> WindowConfig:
@@ -19,4 +20,7 @@ def load_window_config(path: Path) -> WindowConfig:
         height=w["height"],
         title=w["title"],
         fps=w["fps"],
+        resizable=w.get("resizable", False),
     )
+
+

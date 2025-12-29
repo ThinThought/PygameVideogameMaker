@@ -3,3 +3,4 @@ width = 720
 height = 480
 title = "Videogame Maker"
 fps = 60
+resizable = true
