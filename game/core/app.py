@@ -48,11 +48,13 @@ class App:
 
         pygame.display.set_caption(self.cfg.title)
         self.screen_flags = 0
-        if self.cfg.resizable:
+        if self.cfg.fullscreen:
+            self.screen_flags |= pygame.FULLSCREEN
+        elif self.cfg.resizable:
             self.screen_flags |= pygame.RESIZABLE
-        self.screen = pygame.display.set_mode(
-            (self.cfg.width, self.cfg.height), self.screen_flags
-        )
+
+        window_size = (0, 0) if self.cfg.fullscreen else (self.cfg.width, self.cfg.height)
+        self.screen = pygame.display.set_mode(window_size, self.screen_flags)
 
         self.clock = GameClock(self.cfg.fps)
 
