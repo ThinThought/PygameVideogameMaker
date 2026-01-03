@@ -7,14 +7,80 @@
   },
   "scene": {
     "canvas": [
-      1024,
-      768
+      720,
+      480
     ],
     "origin": [
       0,
       0
     ]
   },
-  "nodes": [],
+  "nodes": [
+    {
+      "id": "env-001",
+      "kind": "environment",
+      "type": "game.environments.background.BackgroundEnvironment",
+      "parent": null,
+      "transform": {
+        "position": [
+          0.0,
+          0.0
+        ]
+      },
+      "state": {
+        "layers": [
+          "/home/daiego/ThinThought/Repositories/PygameVideogameMaker/game/assets/images/backgrounds/bg1/bg_sky.png"
+        ],
+        "fill_color": "#0b0b0f",
+        "target_size": null,
+        "size": [
+          720.0,
+          480.0
+        ]
+      },
+      "children": []
+    },
+    {
+      "id": "env-003",
+      "kind": "environment",
+      "type": "game.environments.force.ForceEnvironment",
+      "parent": null,
+      "transform": {
+        "position": [
+          360.0,
+          240.0
+        ]
+      },
+      "state": {
+        "magnitude": 9.81,
+        "auto_integrate": true
+      },
+      "children": [
+        "ent-002"
+      ]
+    },
+    {
+      "id": "ent-002",
+      "kind": "entity",
+      "type": "game.entities.platforms.GrassFloorPlatform",
+      "parent": "env-003",
+      "transform": {
+        "position": [
+          360.0,
+          240.0
+        ]
+      },
+      "state": {
+        "size": [
+          720.0,
+          110.0
+        ],
+        "visible": false,
+        "friction": 0.85,
+        "grip": 1.0
+      },
+      "children": []
+    }
+  ],
   "interactions": []
 }

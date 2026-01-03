@@ -54,4 +54,6 @@ def _iter_items(module: Any, kind: PaletteKind) -> Iterable[PaletteItem]:
         attr = getattr(module, name, None)
         if attr is None:
             continue
+        if getattr(attr, "__dict__", {}).get("__abstract__", False):
+            continue
         yield PaletteItem(name=name, factory=attr, kind=kind)

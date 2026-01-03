@@ -4,8 +4,8 @@ from typing import ClassVar
 
 import pygame
 
-from game.entities.collider import Platform
-from game.entities.sprite_collider import SpriteColliderMixin
+from game.entities.core.collider import Platform
+from game.entities.core.sprite_collider import SpriteColliderMixin
 
 
 class SpritePlatform(SpriteColliderMixin, Platform):
@@ -15,6 +15,8 @@ class SpritePlatform(SpriteColliderMixin, Platform):
     Define `SPRITE_PATH`, `RENDER_SIZE`, and `COLLIDER_SIZE` to configure the
     associated image and keep the collider inside the sprite.
     """
+
+    __abstract__ = True
 
     SPRITE_PATH: ClassVar[str] = ""
     RENDER_SIZE: ClassVar[tuple[int, int] | None] = None
@@ -95,3 +97,12 @@ class GrassFloorPlatform(SpritePlatform):
         **platform_kwargs,
     ) -> None:
         super().__init__(pos, show_collider=show_collider, **platform_kwargs)
+
+
+__all__ = [
+    "SpritePlatform",
+    "GrassSmallPlatform",
+    "GrassWidePlatform",
+    "GrassLargePlatform",
+    "GrassFloorPlatform",
+]

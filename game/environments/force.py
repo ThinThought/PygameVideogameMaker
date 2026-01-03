@@ -4,7 +4,7 @@ from typing import Iterator
 
 import pygame
 
-from game.entities.mass import MassEntity
+from game.entities.core.mass import MassEntity
 from game.environments.base import Environment, AppLike
 
 

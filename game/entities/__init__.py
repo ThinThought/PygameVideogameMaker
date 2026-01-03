@@ -1,6 +1,5 @@
-from .mass import MassEntity
-from .visible_mass import VisibleMassEntity
-from .collider import ColliderEntity, Platform
+from .core import MassEntity, VisibleMassEntity
+from .core import ColliderEntity, Platform
 from .platforms import (
     SpritePlatform,
     GrassSmallPlatform,
@@ -8,9 +7,8 @@ from .platforms import (
     GrassLargePlatform,
     GrassFloorPlatform,
 )
-from .void import VoidEntity
-from .playable import PlayableMassEntity
-from .spyke_player import SpykePlayer
+from .misc import VoidEntity
+from .players import PlayableMassEntity, SpykePlayer
 
 __all__ = [
     "PlayableMassEntity",
