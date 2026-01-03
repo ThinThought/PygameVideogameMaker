@@ -17,23 +17,47 @@
   },
   "nodes": [
     {
+      "id": "env-005",
+      "kind": "environment",
+      "type": "game.environments.background.BackgroundEnvironment",
+      "parent": null,
+      "transform": {
+        "position": [
+          0.0,
+          0.0
+        ]
+      },
+      "state": {
+        "layers": [
+          "/home/daiego/ThinThought/Repositories/PygameVideogameMaker/game/assets/images/backgrounds/bg1/bg_sky.png"
+        ],
+        "fill_color": "#0b0b0f",
+        "target_size": null,
+        "size": [
+          0.0,
+          0.0
+        ]
+      },
+      "children": []
+    },
+    {
       "id": "env-004",
       "kind": "environment",
       "type": "game.environments.force.ForceEnvironment",
       "parent": null,
       "transform": {
         "position": [
-          360.0,
-          240.0
+          243.33333333333331,
+          121.66666666666669
         ]
       },
       "state": {
-        "magnitude": 20.0,
+        "magnitude": 22.0,
         "auto_integrate": true
       },
       "children": [
-        "ent-004",
-        "ent-005"
+        "ent-005",
+        "ent-004"
       ]
     },
     {
@@ -43,8 +67,8 @@
       "parent": "env-004",
       "transform": {
         "position": [
-          360.0,
-          240.0
+          361.6666666666667,
+          326.6666666666667
         ]
       },
       "state": {
@@ -65,8 +89,8 @@
       "parent": "env-004",
       "transform": {
         "position": [
-          360.0,
-          240.0
+          488.3333333333334,
+          298.33333333333337
         ]
       },
       "state": {
@@ -76,8 +100,8 @@
           0.0,
           0.0
         ],
-        "visible": true,
-        "show_collider": true,
+        "visible": false,
+        "show_collider": false,
         "color": "(76, 139, 245, 255)",
         "outline_color": "(18, 44, 92, 255)",
         "label_color": "(255, 255, 255, 255)",
