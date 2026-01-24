@@ -17,7 +17,27 @@
   },
   "nodes": [
     {
-      "id": "env-005",
+      "id": "env-008",
+      "kind": "environment",
+      "type": "game.environments.music.MusicEnvironment",
+      "parent": null,
+      "transform": {
+        "position": [
+          96.66666666666656,
+          406.66666666666663
+        ]
+      },
+      "state": {
+        "track": "demo.mp3",
+        "volume": 1.0,
+        "loop": true,
+        "fade_ms": 0,
+        "stop_fade_ms": 0
+      },
+      "children": []
+    },
+    {
+      "id": "env-010",
       "kind": "environment",
       "type": "game.environments.background.BackgroundEnvironment",
       "parent": null,
@@ -29,7 +49,7 @@
       },
       "state": {
         "layers": [
-          "/home/daiego/ThinThought/Repositories/PygameVideogameMaker/game/assets/images/backgrounds/bg1/bg_sky.png"
+          "/Users/daiego/ThinThought/PygameVideogameMaker/game/assets/images/backgrounds/bg1/bg_sky.png"
         ],
         "fill_color": "#0b0b0f",
         "target_size": null,
@@ -41,34 +61,35 @@
       "children": []
     },
     {
-      "id": "env-004",
+      "id": "env-009",
       "kind": "environment",
       "type": "game.environments.force.ForceEnvironment",
       "parent": null,
       "transform": {
         "position": [
-          243.33333333333331,
-          121.66666666666669
+          663.0,
+          53.0
         ]
       },
       "state": {
-        "magnitude": 22.0,
+        "magnitude": 9.81,
         "auto_integrate": true
       },
       "children": [
-        "ent-005",
-        "ent-004"
+        "ent-012",
+        "ent-011",
+        "ent-013"
       ]
     },
     {
-      "id": "ent-005",
+      "id": "ent-011",
       "kind": "entity",
       "type": "game.entities.platforms.GrassFloorPlatform",
-      "parent": "env-004",
+      "parent": "env-009",
       "transform": {
         "position": [
-          361.6666666666667,
-          326.6666666666667
+          360.0,
+          305.0
         ]
       },
       "state": {
@@ -83,14 +104,14 @@
       "children": []
     },
     {
-      "id": "ent-004",
+      "id": "ent-013",
       "kind": "entity",
       "type": "game.entities.players.spyke_player.SpykePlayer",
-      "parent": "env-004",
+      "parent": "env-009",
       "transform": {
         "position": [
-          488.3333333333334,
-          298.33333333333337
+          360.0,
+          305.0
         ]
       },
       "state": {
@@ -100,7 +121,7 @@
           0.0,
           0.0
         ],
-        "visible": false,
+        "visible": true,
         "show_collider": false,
         "color": "(76, 139, 245, 255)",
         "outline_color": "(18, 44, 92, 255)",
@@ -140,6 +161,28 @@
           60
         ],
         "anim": null
+      },
+      "children": []
+    },
+    {
+      "id": "ent-012",
+      "kind": "entity",
+      "type": "game.entities.platforms.GrassSmallPlatform",
+      "parent": "env-009",
+      "transform": {
+        "position": [
+          518.3333333333333,
+          225.0
+        ]
+      },
+      "state": {
+        "size": [
+          175.0,
+          40.0
+        ],
+        "visible": false,
+        "friction": 0.85,
+        "grip": 1.0
       },
       "children": []
     }

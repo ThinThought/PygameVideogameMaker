@@ -48,9 +48,10 @@ class ForceEnvironment(Environment):
         else:
             self._force_vec = pygame.Vector2(0, 0)
 
+        combined_force = self._combined_force_vector()
         for entity in self._iter_child_mass_entities():
             # magnitude = m/s² (9.81) and direction normalized
-            entity.apply_acceleration(self._direction * self.magnitude)
+            entity.apply_acceleration(combined_force)
             if self.auto_integrate:
                 entity.integrate(dt)
 
@@ -95,6 +96,36 @@ class ForceEnvironment(Environment):
                     continue
                 instance = child_node.instance
                 if isinstance(instance, MassEntity):
+                    yield instance
+
+        return _gen()
+
+    def _combined_force_vector(self) -> pygame.Vector2:
+        if self._runtime is None or self._node_id is None:
+            return pygame.Vector2(self._force_vec)
+
+        node = self._runtime.nodes.get(self._node_id)
+        if node is None:
+            return pygame.Vector2(self._force_vec)
+
+        parent_id = node.parent
+        total = pygame.Vector2(0, 0)
+        for sibling in self._iter_sibling_force_envs(parent_id):
+            total += sibling._direction * sibling.magnitude
+        return total
+
+    def _iter_sibling_force_envs(
+        self, parent_id: str | None
+    ) -> Iterator["ForceEnvironment"]:
+        if self._runtime is None:
+            return iter(())
+
+        def _gen() -> Iterator["ForceEnvironment"]:
+            for node in self._runtime.iter_nodes("environment"):
+                if node.parent != parent_id:
+                    continue
+                instance = node.instance
+                if isinstance(instance, ForceEnvironment):
                     yield instance
 
         return _gen()
