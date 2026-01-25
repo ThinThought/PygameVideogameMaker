@@ -19,6 +19,7 @@ Entidades:
 - Jugadores: `game/entities/players/`
 - Plataformas: `game/entities/platforms/`
 - Miscelaneo: `game/entities/misc/`
+- Nuevas entidades del juego: `game/entities/custom/` (usa `_template_entity.py` como base)
 
 Environments:
 - `game/environments/`
@@ -27,8 +28,9 @@ Environments:
 
 1) Crea la clase heredando de `Entity` o alguna base concreta (ej: `VisibleMassEntity`).
 2) Implementa los metodos que necesites: `on_spawn`, `update`, `render`, etc.
-3) Coloca el archivo en la subcarpeta correcta.
-4) Exporta la clase para que el editor la vea (ver "Selector del editor").
+3) Coloca el archivo en `game/entities/custom/`.
+4) Exporta la clase en `game/entities/custom/__init__.py` para que el editor la vea
+   (ver "Selector del editor").
 
 Ejemplo minimo:
 
@@ -80,7 +82,7 @@ class SlowZone(Environment):
 
 El selector usa `__all__` para poblar el catalogo:
 
-- Entities: `game/entities/__init__.py`
+- Entities: `game/entities/__init__.py` (incluye lo que exportes en `game/entities/custom/__init__.py`)
 - Environments: `game/environments/__init__.py`
 
 Si una clase es abstracta, marca:

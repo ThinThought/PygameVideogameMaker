@@ -5,3 +5,5 @@ title = "Videogame Maker"
 fps = 60
 resizable = true
 fullscreen = false
+display_index = 0
+window_pos = [100, 100]

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
+import os
 from pathlib import Path
 from time import perf_counter
 from typing import NamedTuple, Type
@@ -35,6 +36,10 @@ class App:
     def __init__(self, config: WindowConfig) -> None:
         self.cfg = config
 
+        if self.cfg.window_pos is not None:
+            x, y = self.cfg.window_pos
+            os.environ["SDL_VIDEO_WINDOW_POS"] = f"{x},{y}"
+
         pygame.init()
         pygame.joystick.init()
 
@@ -54,7 +59,14 @@ class App:
             self.screen_flags |= pygame.RESIZABLE
 
         window_size = (0, 0) if self.cfg.fullscreen else (self.cfg.width, self.cfg.height)
-        self.screen = pygame.display.set_mode(window_size, self.screen_flags)
+        if self.cfg.display_index is None:
+            self.screen = pygame.display.set_mode(window_size, self.screen_flags)
+        else:
+            self.screen = pygame.display.set_mode(
+                window_size,
+                self.screen_flags,
+                display=int(self.cfg.display_index),
+            )
 
         self.clock = GameClock(self.cfg.fps)
 

@@ -9,6 +9,8 @@ from .platforms import (
 )
 from .misc import VoidEntity
 from .players import PlayableMassEntity, SpykePlayer
+from .custom import __all__ as _custom_all
+from .custom import *  # noqa: F401,F403
 
 __all__ = [
     "PlayableMassEntity",
@@ -19,4 +21,4 @@ __all__ = [
     "GrassLargePlatform",
     "GrassFloorPlatform",
     "VoidEntity",
-]
+] + _custom_all
