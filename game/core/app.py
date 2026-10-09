@@ -255,6 +255,10 @@ class App:
                     self.running = False
                     continue
 
+                if ev.type == pygame.KEYDOWN and ev.key == pygame.K_ESCAPE:
+                    self.running = False
+                    break
+
                 if ev.type == pygame.VIDEORESIZE:
                     if self.scene:
                         self.scene.on_window_resize(ev.size)

@@ -17,39 +17,46 @@
   },
   "nodes": [
     {
-      "id": "env-001",
+      "id": "env-002",
       "kind": "environment",
-      "type": "game.environments.void.VoidEnvironment",
+      "type": "game.environments.background.BackgroundEnvironment",
       "parent": null,
       "transform": {
         "position": [
-          360.0,
-          240.0
+          -0.2836879432624073,
+          -0.21276595744674864
         ]
       },
       "state": {
-        "visible": false,
-        "radius": 24.0,
-        "color": "(50, 50, 50, 255)",
-        "crosshair": true
+        "layers": [
+          "/Users/daiego/ThinThought/PygameVideogameMaker/game/assets/images/backgrounds/bg1/bg_sky.png"
+        ],
+        "fill_color": "#0b0b0f",
+        "target_size": null,
+        "size": [
+          720.0,
+          480.0
+        ]
       },
-      "children": [
-        "ent-001"
-      ]
+      "children": []
     },
     {
-      "id": "ent-001",
-      "kind": "entity",
-      "type": "game.entities.custom.galagos_ear.GalagosEar",
-      "parent": "env-001",
+      "id": "env-003",
+      "kind": "environment",
+      "type": "game.environments.music.MusicEnvironment",
+      "parent": null,
       "transform": {
         "position": [
-          360.0,
-          240.0
+          -115.00000000000003,
+          -66.66666666666666
         ]
       },
       "state": {
-        "radius": 10
+        "track": "demo.mp3",
+        "volume": 1.0,
+        "loop": true,
+        "fade_ms": 0,
+        "stop_fade_ms": 0
       },
       "children": []
     }

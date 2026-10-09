@@ -14,6 +14,9 @@ class MusicEnvironment(Environment):
     - Renders nothing.
     """
 
+    # Read only by the editor. Runtime scenes never draw editor markers.
+    EDITOR_MARKER_LABEL = "Music"
+
     def __init__(
         self,
         pos: pygame.Vector2 | tuple[float, float] | None = None,

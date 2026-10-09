@@ -35,7 +35,10 @@ class Node:
     def radius(self) -> float:
         if self.payload is None:
             return 0.0
-        return float(getattr(self.payload, "radius", 0.0))
+        default_radius = (
+            12.0 if getattr(self.payload, "EDITOR_MARKER_LABEL", None) else 0.0
+        )
+        return float(getattr(self.payload, "radius", default_radius))
 
 
 class EditorModel:

@@ -155,6 +155,8 @@ class EditorScene(Scene):
         self.scene_height = 0
         self.canvas_rect = pygame.Rect(0, 0, 0, 0)
         self.scene_canvas_rect = pygame.Rect(0, 0, 0, 0)  # editable virtual space
+        self.workspace_rect = pygame.Rect(0, 0, 0, 0)
+        self.workspace_padding = pygame.Vector2(0, 0)
         self._canvas_surface: pygame.Surface | None = None
         self._canvas_surface_size: tuple[int, int] | None = None
         self.vcursor_enabled = False
@@ -303,13 +305,20 @@ class EditorScene(Scene):
         )
         target_w = self.scene_canvas_rect.width or 1
         target_h = self.scene_canvas_rect.height or 1
-        scaled_w = int(target_w * self.canvas_scale)
-        scaled_h = int(target_h * self.canvas_scale)
-        scaled_w = max(0, min(canvas_area.width, scaled_w))
-        scaled_h = max(0, min(canvas_area.height, scaled_h))
+        self.workspace_padding.update(max(160, target_w // 3), max(120, target_h // 3))
+        workspace_w = target_w + int(self.workspace_padding.x * 2)
+        workspace_h = target_h + int(self.workspace_padding.y * 2)
+        scaled_w = max(0, min(canvas_area.width, int(workspace_w * self.canvas_scale)))
+        scaled_h = max(0, min(canvas_area.height, int(workspace_h * self.canvas_scale)))
         cx = canvas_area.x + max(0, (canvas_area.width - scaled_w) // 2)
         cy = canvas_area.y + max(0, (canvas_area.height - scaled_h) // 2)
-        self.canvas_rect = pygame.Rect(cx, cy, scaled_w, scaled_h)
+        self.workspace_rect = pygame.Rect(cx, cy, scaled_w, scaled_h)
+        self.canvas_rect = pygame.Rect(
+            cx + int(self.workspace_padding.x * self.canvas_scale),
+            cy + int(self.workspace_padding.y * self.canvas_scale),
+            int(target_w * self.canvas_scale),
+            int(target_h * self.canvas_scale),
+        )
 
         right_x = canvas_area.right + gap
         right_w = max(0, w - right_x - m)
@@ -387,15 +396,16 @@ class EditorScene(Scene):
             return 0.0
         target_w = max(1, self.scene_canvas_rect.width)
         target_h = max(1, self.scene_canvas_rect.height)
-        max_scale_w = available_w / target_w
-        max_scale_h = available_h / target_h
+        max_scale_w = available_w / (target_w + 2 * max(160, target_w // 3))
+        max_scale_h = available_h / (target_h + 2 * max(120, target_h // 3))
         scale = min(self.preview_scale, max_scale_w, max_scale_h)
         return max(0.0, scale)
 
     def _ensure_canvas_surface(self) -> pygame.Surface:
+        pad_x, pad_y = int(self.workspace_padding.x), int(self.workspace_padding.y)
         size = (
-            max(1, self.scene_canvas_rect.width),
-            max(1, self.scene_canvas_rect.height),
+            max(1, self.scene_canvas_rect.width + 2 * pad_x),
+            max(1, self.scene_canvas_rect.height + 2 * pad_y),
         )
         if self._canvas_surface is None or self._canvas_surface_size != size:
             self._canvas_surface = pygame.Surface(size).convert()
@@ -431,7 +441,7 @@ class EditorScene(Scene):
     def render(self, app, screen: pygame.Surface) -> None:
         self._ensure_layout(screen)
 
-        screen.fill("black")
+        screen.fill("white")
 
         self._render_canvas(app, screen)
         mouse = self._mouse_local(app)
@@ -474,19 +484,35 @@ class EditorScene(Scene):
     # ---------------- Render helpers ----------------
 
     def _render_canvas(self, app: AppLike, screen: pygame.Surface) -> None:
-        rect = self.canvas_rect
+        rect = self.workspace_rect
         if rect.width <= 0 or rect.height <= 0 or self.canvas_scale <= 0:
             return
 
         target = self._ensure_canvas_surface()
-        target.fill("white")
-
+        target.fill((226, 229, 234))
+        pad_x, pad_y = int(self.workspace_padding.x), int(self.workspace_padding.y)
+        pygame.draw.rect(target, "white", pygame.Rect(
+            pad_x, pad_y, self.scene_canvas_rect.width, self.scene_canvas_rect.height
+        ))
+        shifted: list[tuple[Any, pygame.Vector2]] = []
         for node in self.model.iter_drawable_nodes():
-            renderer = getattr(node.payload, "render", None)
-            if callable(renderer):
-                renderer(app, target)
-            if node.id == self.model.selected_id:
-                self._render_selection_ring(target, node)
+            pos = getattr(node.payload, "pos", None)
+            if isinstance(pos, pygame.Vector2):
+                shifted.append((node.payload, pygame.Vector2(pos)))
+                pos.x += pad_x
+                pos.y += pad_y
+        try:
+            for node in self.model.iter_drawable_nodes():
+                renderer = getattr(node.payload, "render", None)
+                if callable(renderer):
+                    renderer(app, target)
+                if getattr(node.payload, "EDITOR_MARKER_LABEL", None):
+                    self._render_editor_marker(target, node)
+                if node.id == self.model.selected_id:
+                    self._render_selection_ring(target, node)
+        finally:
+            for payload, original_pos in shifted:
+                payload.pos = original_pos
 
         if (target.get_width(), target.get_height()) == (rect.width, rect.height):
             screen.blit(target, rect.topleft)
@@ -494,14 +520,36 @@ class EditorScene(Scene):
             scaled = pygame.transform.smoothscale(target, (rect.width, rect.height))
             screen.blit(scaled, rect.topleft)
 
-        pygame.draw.rect(screen, (200, 200, 200), rect, width=1, border_radius=6)
+        pygame.draw.rect(screen, (180, 185, 194), rect, width=1)
+        pygame.draw.rect(screen, (35, 110, 220), self.canvas_rect, width=2)
 
     def _render_selection_ring(self, surface: pygame.Surface, node) -> None:
         p = getattr(node.payload, "pos", None)
         if p is None:
             return
-        r = int(getattr(node.payload, "radius", 26)) + 6
+        default_radius = 12 if getattr(node.payload, "EDITOR_MARKER_LABEL", None) else 26
+        r = int(getattr(node.payload, "radius", default_radius)) + 6
         pygame.draw.circle(surface, (255, 200, 0), (int(p.x), int(p.y)), r, 2)
+
+    def _render_editor_marker(self, surface: pygame.Surface, node) -> None:
+        """Draw an editor-only handle for logical nodes with no sprite."""
+        pos = getattr(node.payload, "pos", None)
+        if pos is None:
+            return
+        x, y = int(pos.x), int(pos.y)
+        pygame.draw.circle(surface, (54, 91, 168), (x, y), 13)
+        pygame.draw.circle(surface, (255, 255, 255), (x, y), 13, width=2)
+        # Simple note glyph that works with pygame's default font.
+        pygame.draw.line(surface, "white", (x + 2, y - 7), (x + 2, y + 3), 2)
+        pygame.draw.line(surface, "white", (x + 2, y - 7), (x + 7, y - 9), 2)
+        pygame.draw.circle(surface, "white", (x - 1, y + 4), 3)
+        label = str(getattr(node.payload, "EDITOR_MARKER_LABEL"))
+        text = self.font.render(label, True, (35, 52, 82))
+        label_rect = text.get_rect(midleft=(x + 18, y))
+        background = label_rect.inflate(12, 6)
+        pygame.draw.rect(surface, (255, 255, 255), background, border_radius=5)
+        pygame.draw.rect(surface, (54, 91, 168), background, width=1, border_radius=5)
+        surface.blit(text, label_rect)
 
     def _render_context_menu(self, screen: pygame.Surface) -> None:
         if not self.context_menu_active:
@@ -768,7 +816,7 @@ class EditorScene(Scene):
                 target_id = None
             elif target_id is not None:
                 self.model.select_node(target_id)
-        elif self.canvas_rect.collidepoint(pos):
+        elif self.workspace_rect.collidepoint(pos):
             scene_pos = self._canvas_point_to_scene(pos, clamp=False)
             if scene_pos is not None:
                 target_id = self._select_node_at_scene(scene_pos)
@@ -795,7 +843,7 @@ class EditorScene(Scene):
         *,
         clamp: bool = True,
     ) -> pygame.Vector2 | None:
-        rect = self.canvas_rect
+        rect = self.workspace_rect
         if rect.width <= 0 or rect.height <= 0 or self.canvas_scale <= 0:
             return None
         local_x = pos[0] - rect.x
@@ -808,8 +856,8 @@ class EditorScene(Scene):
         # evita divisiones extra si la escala es cero
         if self.canvas_scale <= 0:
             return None
-        scene_x = local_x / self.canvas_scale
-        scene_y = local_y / self.canvas_scale
+        scene_x = local_x / self.canvas_scale - self.workspace_padding.x
+        scene_y = local_y / self.canvas_scale - self.workspace_padding.y
         return pygame.Vector2(scene_x, scene_y)
 
     def _draw_section_header(
@@ -1090,7 +1138,13 @@ class EditorScene(Scene):
             return
 
         desired = pygame.Vector2(scene_pos) + self.drag_offset
-        self.model.move_selected_within(self.scene_canvas_rect, desired)
+        pad_x, pad_y = int(self.workspace_padding.x), int(self.workspace_padding.y)
+        bounds = pygame.Rect(
+            -pad_x, -pad_y,
+            self.scene_canvas_rect.width + 2 * pad_x,
+            self.scene_canvas_rect.height + 2 * pad_y,
+        )
+        self.model.move_selected_within(bounds, desired)
 
     def _delete_selected(self) -> None:
         node = self.model.selected_node()
@@ -1254,7 +1308,7 @@ class EditorScene(Scene):
         if self.attrs_panel.handle_click(pos):
             return
 
-        if self.canvas_rect.collidepoint(pos):
+        if self.workspace_rect.collidepoint(pos):
             scene_pos = self._canvas_point_to_scene(pos, clamp=False)
             if scene_pos is None:
                 return
