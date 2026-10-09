@@ -1,21 +1,35 @@
-The Entity-Environment Interaction Model
+# Entity-Environment Interaction Model
 
-This model uses two basic constructs to build a game system: Environment and Entity.
+This model is built on two core concepts: `Environment` and `Entity`.
 
-Principles are simple:
+## Overview
 
-Environment:
-- Represents spaces and environments. A space can have physical rules or declare an environment that affects a player or entity directly.
-- There is a Void Environment that has no rules affecting child entities.
-- An environment cannot contain another environment, but it can combine characteristics from other environments.
-- A basic tree looks like: App -> Scene -> Environment -> Entity
-                                             +
-                                      -> Environment -> Entity
+The system defines how game spaces and interactive objects relate to each other.
 
-Environments interact by combining their characteristics for their child entities, but entities from different environments cannot interact with each other.
+## Environment
 
-Entity:
-- An entity is always born inside an Environment.
-- Represents interactive objects within the environment (characters, items, obstacles, etc.).
-An entity can be given any variable or component that enables interaction with its parent environment.
-- An entity can itself contain environments, enabling the creation of additional entities.
+- Represents the space or context where gameplay happens.
+- A space can define physical rules or a behavior profile that directly affects the player or other entities.
+- The `Void Environment` exists as a neutral environment with no rules affecting its child entities.
+- An environment cannot contain another environment as a direct child, but it can combine characteristics from multiple environments.
+- Environments interact by merging their properties and applying them to their child entities.
+- Entities from different environments cannot directly interact with each other.
+
+## Entity
+
+- An entity is always created within an `Environment`.
+- It represents interactive objects in the game, such as characters, items, obstacles, and other dynamic elements.
+- An entity can receive variables, components, or behaviors that allow it to interact with its parent environment.
+- An entity may also contain environments, enabling nested game structures and additional entities.
+
+## Basic structure
+
+```text
+App
+└── Scene
+    ├── Environment -> Entity
+    │
+    └── Environment -> Entity
+```
+
+This structure shows that games are organized as scenes, each containing environments, and each environment hosting one or more entities.
