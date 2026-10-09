@@ -7,12 +7,13 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
-_COPY_DIRS = ("assets", "configs", "game", "vendor")
+_COPY_DIRS = ("game",)
 _COPY_FILES = (
     "pyproject.toml",
     "README.md",
+    ".gitignore",
+    "LICENSE",
     "deploy_to_console.sh",
-    "uv.lock",
     "PygameVideogameMaker.pygame",
 )
 _IGNORE_PATTERNS = shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo", "*.py[co]")
@@ -20,7 +21,7 @@ _IGNORE_PATTERNS = shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo", "*.py
 
 def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
-        prog="pygametemplate",
+        prog="pygame-editor",
         description="Run the current template or generate a new project from it.",
     )
     parser.set_defaults(func=_run_game)
@@ -111,7 +112,7 @@ def _generate_project(args: argparse.Namespace) -> None:
         (destination / file_name).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src_file, destination / file_name)
 
-    name_tokens = _tokenize_name(args.name)
+    name_tokens = _tokenize_name(Path(args.name).name)
     slug = (
         _slugify("-".join(name_tokens)) if name_tokens else _slugify(destination.name)
     )
@@ -119,8 +120,15 @@ def _generate_project(args: argparse.Namespace) -> None:
     launcher_stub = _to_pascal_case(name_tokens)
 
     _rewrite_pyproject(destination / "pyproject.toml", slug)
+    _rewrite_window_title(
+        destination / "game" / "configs" / "settings.toml", readable_name
+    )
     _rename_launcher(destination, launcher_stub)
-    _rewrite_readme(destination / "README.md", readable_name)
+    _write_project_readme(destination / "README.md", readable_name, slug)
+    starter_composition = (
+        destination / "game" / "configs" / "compositions" / "editor_export.eei.json"
+    )
+    _write_starter_composition(starter_composition)
 
     rel_path = (
         destination.relative_to(Path.cwd())
@@ -138,7 +146,8 @@ def _resolve_destination(name: str, base_dir: str) -> Path:
 
 
 def _tokenize_name(raw_name: str) -> list[str]:
-    tokens = re.split(r"[^A-Za-z0-9]+", raw_name)
+    normalized = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", raw_name)
+    tokens = re.split(r"[^A-Za-z0-9]+", normalized)
     return [token for token in tokens if token]
 
 
@@ -166,12 +175,25 @@ def _rewrite_pyproject(pyproject_path: Path, project_slug: str) -> None:
         r'(?m)^name\s*=\s*".*"$', f'name = "{project_slug}"', content, count=1
     )
     content = re.sub(
-        r'(?m)^(\s*)pygametemplate\s*=\s*".*"$',
-        r"\1" + f'{project_slug} = "game.cli:main"',
+        r'(?m)^pygame-editor\s*=\s*"game\.cli:main"$',
+        f'{project_slug} = "game.cli:main"',
         content,
         count=1,
     )
     pyproject_path.write_text(content, encoding="utf-8")
+
+
+def _rewrite_window_title(settings_path: Path, project_name: str) -> None:
+    if not settings_path.exists():
+        return
+    content = settings_path.read_text(encoding="utf-8")
+    content = re.sub(
+        r'(?m)^title\s*=\s*".*"$',
+        f'title = "{project_name}"',
+        content,
+        count=1,
+    )
+    settings_path.write_text(content, encoding="utf-8")
 
 
 def _rename_launcher(project_root: Path, launcher_stub: str) -> None:
@@ -182,15 +204,49 @@ def _rename_launcher(project_root: Path, launcher_stub: str) -> None:
     original_launcher.rename(new_name)
 
 
-def _rewrite_readme(readme_path: Path, project_name: str) -> None:
-    if not readme_path.exists():
-        return
-    lines = readme_path.read_text(encoding="utf-8").splitlines()
-    if not lines:
-        return
-    if lines[0].startswith("# "):
-        lines[0] = f"# {project_name}"
-        readme_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+def _write_project_readme(readme_path: Path, project_name: str, command: str) -> None:
+    readme_path.write_text(
+        f"""# {project_name}
+
+A 2D game project created with Pygame Videogame Maker. The editor, runtime,
+composition format, and generic starter entities and environments are included.
+
+## Get started
+
+```bash
+uv sync
+uv run {command} editor
+```
+
+Use the editor palette to add entities and environments, then save the scene.
+To run the game, use:
+
+```bash
+uv run {command} run
+```
+
+## Develop the game
+
+Read [`game/docs/DevelopingAGame.md`](game/docs/DevelopingAGame.md) for the
+project structure, EEI model, and instructions for adding game-specific code.
+The Spanish guide is [`game/docs/DesarrollarUnJuego.md`](game/docs/DesarrollarUnJuego.md).
+The scene is stored in `game/configs/compositions/editor_export.eei.json`.
+""",
+        encoding="utf-8",
+    )
+
+
+def _write_starter_composition(composition_path: Path) -> None:
+    composition_path.write_text(
+        '{\n'
+        '  "version": 1,\n'
+        '  "metadata": {"name": "starter-scene", "description": "", "tags": []},\n'
+        '  "scene": {"canvas": [720, 480], "origin": [0, 0]},\n'
+        '  "nodes": [],\n'
+        '  "interactions": []\n'
+        '}\n',
+        encoding="utf-8",
+    )
 
 
 if __name__ == "__main__":
