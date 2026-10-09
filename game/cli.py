@@ -73,7 +73,7 @@ def _run_editor(_: argparse.Namespace) -> None:
     app = App(cfg)
 
     editor_scene_index = -1
-    for i, scene_cls in enumerate(app.scenes):
+    for i, scene_cls in enumerate(app.scenes.values()):
         if scene_cls is EditorScene:
             editor_scene_index = i
             break
