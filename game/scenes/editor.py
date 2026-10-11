@@ -92,7 +92,6 @@ class EditorScene(Scene):
     def __init__(self) -> None:
         self.registry = PaletteRegistry.from_modules(entities, environments)
         self.model = EditorModel(self.registry)
-
         self.dragging = False
         self.drag_mode: str | None = None
         self.drag_offset = pygame.Vector2(0, 0)
@@ -416,7 +415,6 @@ class EditorScene(Scene):
 
     def update(self, app: AppLike, dt: float) -> None:
         self._sync_vcursor_enabled()
-
         if self.vcursor_enabled:
             self.vcursor_pos += self.vcursor_vel * dt
             self.vcursor_pos.x = max(0, min(self.scene_width - 1, self.vcursor_pos.x))
@@ -1005,6 +1003,12 @@ class EditorScene(Scene):
                     self._apply_custom_resolution(size)
                 return
             if self.attrs_panel.editing and self.attrs_panel.handle_keydown(ev):
+                return
+            if ev.key == pygame.K_UP:
+                self.attrs_panel.move_focus(-1)
+                return
+            if ev.key == pygame.K_DOWN:
+                self.attrs_panel.move_focus(1)
                 return
             if ev.key in (pygame.K_DELETE, pygame.K_BACKSPACE):
                 self._delete_selected()

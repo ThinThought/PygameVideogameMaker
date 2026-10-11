@@ -73,6 +73,11 @@ inicializar y limpiar recursos, y `update` para la lógica continua. Las reglas
 específicas del juego deben vivir en su entorno, sin modificar el cargador EEI
 compartido.
 
+El inspector agrupa los atributos según la clase que los define. Usa las flechas
+arriba y abajo para recorrerlos y Enter para editar un atributo.
+En las plataformas con sprite, `render_size` controla las dimensiones visuales y
+`size` controla las dimensiones del collider.
+
 ## Organización recomendada
 
 - Guarda entidades propias en `game/entities/custom/` y entornos propios en

@@ -38,6 +38,9 @@ class SpriteColliderMixin:
         collider_kwargs.setdefault("collider_offset", self._resolve_collider_offset())
         collider_kwargs.setdefault("visible", show_collider)
         super().__init__(pos, **collider_kwargs)
+        self.render_size = (
+            pygame.Vector2(self.RENDER_SIZE) if self.RENDER_SIZE is not None else None
+        )
         self._sprite: pygame.Surface | None = None
 
     # ------------------------------------------------------------------
@@ -50,7 +53,9 @@ class SpriteColliderMixin:
         self._sprite = None
 
     def render(self, app: AppLike, screen: pygame.Surface) -> None:
-        sprite = self._sprite or self._ensure_sprite()
+        if self.COLLIDER_OFFSET is None:
+            self.collider_offset = self._offset_from_anchor()
+        sprite = self._ensure_sprite()
         if sprite is not None:
             rect = sprite.get_rect(center=(int(self.pos.x), int(self.pos.y)))
             screen.blit(sprite, rect)
@@ -70,7 +75,9 @@ class SpriteColliderMixin:
         return sprite
 
     def _cache_key(self) -> str:
-        size = self.RENDER_SIZE or (-1, -1)
+        size = self.render_size
+        if size is None:
+            size = (-1, -1)
         return f"{self.__class__.__name__}:{self.SPRITE_PATH}:{int(size[0])}x{int(size[1])}"
 
     def _load_sprite(self) -> pygame.Surface | None:
@@ -90,8 +97,8 @@ class SpriteColliderMixin:
             print(f"[{self.__class__.__name__}] Failed to load {path}: {exc}")
             return None
 
-        if self.RENDER_SIZE is not None:
-            width, height = self.RENDER_SIZE
+        if self.render_size is not None:
+            width, height = self.render_size
             if width > 0 and height > 0:
                 sprite = pygame.transform.smoothscale(sprite, (int(width), int(height)))
 
@@ -118,10 +125,13 @@ class SpriteColliderMixin:
         return self._offset_from_anchor()
 
     def _offset_from_anchor(self) -> pygame.Vector2:
-        if self.RENDER_SIZE is None:
+        render_size = getattr(self, "render_size", None)
+        if render_size is None:
+            render_size = self.RENDER_SIZE
+        if render_size is None:
             return pygame.Vector2(0, 0)
         anchor = self._clamped_anchor()
-        sprite_size = pygame.Vector2(self.RENDER_SIZE)
+        sprite_size = pygame.Vector2(render_size)
         collider_size = pygame.Vector2(self.COLLIDER_SIZE)
         span = pygame.Vector2(
             max(0.0, sprite_size.x - collider_size.x),
