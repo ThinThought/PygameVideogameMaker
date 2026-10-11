@@ -7,6 +7,8 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
+from game.exporter import export_game
+
 _COPY_DIRS = ("game",)
 _COPY_FILES = (
     "pyproject.toml",
@@ -50,6 +52,23 @@ def main(argv: Sequence[str] | None = None) -> None:
         help="Directory where the project will be created (defaults to current).",
     )
     new_parser.set_defaults(func=_generate_project)
+
+    export_parser = subparsers.add_parser(
+        "export", help="Export a project for distribution."
+    )
+    export_subparsers = export_parser.add_subparsers(
+        dest="export_kind", required=True
+    )
+    export_game_parser = export_subparsers.add_parser(
+        "game", help="Create a Linux game-only project without development scenes."
+    )
+    export_game_parser.add_argument(
+        "-o",
+        "--output-dir",
+        default=None,
+        help="Base directory for dist/ (prompted when omitted; Enter uses the current directory).",
+    )
+    export_game_parser.set_defaults(func=_export_game)
 
     args = parser.parse_args(argv)
     func = args.func
@@ -136,6 +155,16 @@ def _generate_project(args: argparse.Namespace) -> None:
         else destination
     )
     print(f"Project generated at: {rel_path}")
+
+
+def _export_game(args: argparse.Namespace) -> None:
+    output_parent = args.output_dir
+    if output_parent is None:
+        entered_path = input(f"Directorio para dist/ [{Path.cwd()}]: ").strip()
+        output_parent = entered_path or str(Path.cwd())
+
+    destination = export_game(Path.cwd(), Path(output_parent).expanduser() / "dist")
+    print(f"Game exported to {destination}")
 
 
 def _resolve_destination(name: str, base_dir: str) -> Path:
