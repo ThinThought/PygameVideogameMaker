@@ -75,6 +75,11 @@ export the class from `game/environments/__init__.py`. Use `on_spawn` and
 can apply rules to descendant entities; keep game-specific rules in the new
 environment rather than changing the shared EEI loader.
 
+The attribute inspector groups component fields by the class that defines them.
+Use the Up and Down arrows to move through the inspector; Enter edits a field.
+For sprite platforms, `render_size` controls the visible sprite dimensions and
+`size` controls the collider dimensions.
+
 ## Keep game content organized
 
 - Put game-specific entities in `game/entities/custom/` and game-specific

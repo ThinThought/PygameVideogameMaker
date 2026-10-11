@@ -76,7 +76,7 @@
         "auto_integrate": true
       },
       "children": [
-        "ent-001",
+        "ent-006",
         "ent-002",
         "ent-003",
         "ent-004",
@@ -84,24 +84,28 @@
       ]
     },
     {
-      "id": "ent-001",
+      "id": "ent-006",
       "kind": "entity",
       "type": "game.entities.platforms.GrassFloorPlatform",
       "parent": "env-004",
       "transform": {
         "position": [
-          360.5191256830602,
-          276.32944228274977
+          186.0,
+          306.0
         ]
       },
       "state": {
         "size": [
-          1000.0,
+          720.0,
           110.0
         ],
         "visible": false,
         "friction": 0.85,
-        "grip": 1.0
+        "grip": 1.0,
+        "render_size": [
+          720.0,
+          480.0
+        ]
       },
       "children": []
     },
@@ -123,7 +127,11 @@
         ],
         "visible": false,
         "friction": 0.85,
-        "grip": 1.0
+        "grip": 1.0,
+        "render_size": [
+          320.0,
+          84.0
+        ]
       },
       "children": []
     },
@@ -145,7 +153,11 @@
         ],
         "visible": false,
         "friction": 0.85,
-        "grip": 1.0
+        "grip": 1.0,
+        "render_size": [
+          256.0,
+          72.0
+        ]
       },
       "children": []
     },
@@ -167,7 +179,11 @@
         ],
         "visible": false,
         "friction": 0.85,
-        "grip": 1.0
+        "grip": 1.0,
+        "render_size": [
+          192.0,
+          60.0
+        ]
       },
       "children": []
     },

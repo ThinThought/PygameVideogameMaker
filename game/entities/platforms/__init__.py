@@ -12,8 +12,9 @@ class SpritePlatform(SpriteColliderMixin, Platform):
     """
     Sprite-based platform that reuses Platform collision logic.
 
-    Define `SPRITE_PATH`, `RENDER_SIZE`, and `COLLIDER_SIZE` to configure the
-    associated image and keep the collider inside the sprite.
+    Define `SPRITE_PATH`, `RENDER_SIZE`, and `COLLIDER_SIZE` for the defaults.
+    Each instance exposes editable `render_size` and `size` values for its sprite
+    and collider respectively.
     """
 
     __abstract__ = True

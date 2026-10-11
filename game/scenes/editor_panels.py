@@ -15,6 +15,7 @@ class AttrEntry:
     attr_name: str | None = None
     raw_value: Any = None
     component: str | None = None
+    section: bool = False
 
 
 class SectionPanel:
@@ -675,6 +676,21 @@ class AttrsPanel(SectionPanel):
             if line_rect.bottom >= body_top:
                 if line_rect.top > body_bottom:
                     break
+                if entry.section:
+                    pygame.draw.rect(
+                        screen, (42, 53, 64), line_rect, border_radius=3
+                    )
+                    pygame.draw.line(
+                        screen,
+                        (90, 125, 155),
+                        (line_rect.x + 4, line_rect.bottom - 1),
+                        (line_rect.right - 4, line_rect.bottom - 1),
+                        1,
+                    )
+                    title = self.font.render(entry.label, True, (135, 185, 220))
+                    screen.blit(title, (xk, y + 1))
+                    y += self.attr_line_h
+                    continue
                 is_focus = idx == self.focus_index
                 if is_focus:
                     color = (90, 70, 40) if entry.editable else (60, 60, 60)
@@ -705,6 +721,8 @@ class AttrsPanel(SectionPanel):
 
         old_idx = self.focus_index
         self.focus_index = max(0, min(self.focus_index, max_idx))
+        if entries[self.focus_index].section:
+            self.focus_index = self._nearest_focusable(entries, self.focus_index)
         if old_idx != self.focus_index:
             self._focus_changed = True
 
@@ -714,6 +732,35 @@ class AttrsPanel(SectionPanel):
         if self._focus_changed:
             self._scroll_focus_into_view(entries)
             self._focus_changed = False
+
+    def move_focus(self, direction: int) -> None:
+        entries = self.current_entries()
+        focusable = [
+            index for index, entry in enumerate(entries) if not entry.section
+        ]
+        if not focusable:
+            return
+        current = self.focus_index
+        candidates = [index for index in focusable if index > current]
+        if direction < 0:
+            candidates = [index for index in focusable if index < current]
+            target = candidates[-1] if candidates else focusable[-1]
+        else:
+            target = candidates[0] if candidates else focusable[0]
+        self.focus_index = target
+        self._focus_changed = True
+        node = self.model.selected_node()
+        if node is not None:
+            self._scroll_focus_into_view(entries)
+            self._focus_changed = False
+
+    @staticmethod
+    def _nearest_focusable(entries: list[AttrEntry], index: int) -> int:
+        for offset in range(1, len(entries) + 1):
+            for candidate in (index + offset, index - offset):
+                if 0 <= candidate < len(entries) and not entries[candidate].section:
+                    return candidate
+        return 0
 
     def _scroll_focus_into_view(self, entries: list[AttrEntry]) -> None:
         if not entries:
@@ -797,7 +844,7 @@ class AttrsPanel(SectionPanel):
                 seen_attrs.add(k)
 
             if class_level_attrs:
-                items.append(AttrEntry(f"[{cls.__name__}]", "", editable=False))
+                items.append(AttrEntry(cls.__name__, "", section=True))
                 items.extend(sorted(class_level_attrs, key=lambda x: x.label))
 
         remaining_instance_attrs: list[AttrEntry] = []
@@ -821,7 +868,7 @@ class AttrsPanel(SectionPanel):
             seen_attrs.add(k)
 
         if remaining_instance_attrs:
-            items.append(AttrEntry("[Instance]", "", editable=False))
+            items.append(AttrEntry("Instance attributes", "", section=True))
             items.extend(sorted(remaining_instance_attrs, key=lambda x: x.label))
 
         return items
