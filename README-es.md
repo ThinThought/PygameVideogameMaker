@@ -34,6 +34,23 @@ uv run pygame-editor editor
 
 Para ejecutar directamente la composición actual, usa `uv run pygame-editor run`.
 
+### Exportar el juego
+
+Cuando termines de desarrollar, genera una copia de solo juego para Linux:
+
+```bash
+uv run pygame-editor export game
+```
+
+El comando pregunta dónde crear `dist/`; pulsa Enter para usar el directorio
+actual. También puedes pasar el directorio directamente con
+`--output-dir /ruta/de/salida`. El resultado se guarda en
+`dist/<nombre-del-proyecto>-linux`. Incluye el
+runtime, la composición y los recursos del proyecto, y elimina las escenas y
+el código del editor y del visor de mandos. Si el proyecto tiene una carpeta
+`vendor/`, también se copia para que el launcher pueda cargar sus dependencias.
+El launcher `.pygame` requiere Python 3.12 o posterior en el sistema destino.
+
 ### Crear un proyecto de videojuego
 
 Desde el repositorio del editor, genera una carpeta de proyecto limpia:
