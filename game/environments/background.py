@@ -6,7 +6,6 @@ from typing import Sequence
 import pygame
 
 from game.environments.base import Environment, AppLike
-from game.core.resources import get_asset_path
 
 
 class BackgroundEnvironment(Environment):
@@ -27,13 +26,7 @@ class BackgroundEnvironment(Environment):
         target_size: tuple[int, int] | None = None,
     ) -> None:
         self.pos = pygame.Vector2(pos) if pos is not None else pygame.Vector2(0, 0)
-        DEFAULT_BACKGROUND_PATHS = [
-            str(get_asset_path("images/backgrounds/bg1/bg_sky.png")),
-        ]
-
-        self.layers = (
-            list(layers) if layers is not None else list(DEFAULT_BACKGROUND_PATHS)
-        )
+        self.layers = list(layers) if layers is not None else []
         self.fill_color = fill_color
         self.target_size = target_size
         if target_size is not None:

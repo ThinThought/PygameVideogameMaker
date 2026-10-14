@@ -26,9 +26,9 @@ Ejecuta `uv run mi-juego run` para jugar. El editor guarda la escena en
 ## Componer una escena
 
 La paleta incluye entidades y entornos básicos. Puedes empezar con
-`VoidEntity`, las plataformas, `BackgroundEnvironment`, `ForceEnvironment` y
-`MusicEnvironment`. `SpykePlayer` es un personaje de ejemplo que sirve como
-referencia o que puedes sustituir por el personaje de tu juego.
+`VoidEntity`, `BackgroundEnvironment`, `ForceEnvironment` y `MusicEnvironment`.
+Añade las entidades y los entornos propios de tu juego en
+los paquetes indicados en esta guía.
 
 En el modelo EEI, cada entidad vive dentro de un entorno. Un entorno puede
 contener entidades y una entidad puede contener entornos, formando reglas
@@ -75,8 +75,7 @@ compartido.
 
 El inspector agrupa los atributos según la clase que los define. Usa las flechas
 arriba y abajo para recorrerlos y Enter para editar un atributo.
-En las plataformas con sprite, `render_size` controla las dimensiones visuales y
-`size` controla las dimensiones del collider.
+En las entidades con sprite, usa rutas relativas a `game/assets/`.
 
 ## Organización recomendada
 

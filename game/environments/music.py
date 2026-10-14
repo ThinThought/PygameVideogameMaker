@@ -21,7 +21,7 @@ class MusicEnvironment(Environment):
         self,
         pos: pygame.Vector2 | tuple[float, float] | None = None,
         *,
-        track: str = "demo.mp3",
+        track: str = "",
         volume: float = 1.0,
         loop: bool = True,
         fade_ms: int = 0,
@@ -29,7 +29,7 @@ class MusicEnvironment(Environment):
     ) -> None:
         # Environments are instantiated with a default position by the loader.
         self.pos = pygame.Vector2(pos) if pos is not None else pygame.Vector2(0, 0)
-        resolved_track = track if isinstance(track, str) else "demo.mp3"
+        resolved_track = track if isinstance(track, str) else ""
         self.track = resolved_track
         self._default_track = resolved_track
         self.volume = volume
@@ -45,6 +45,9 @@ class MusicEnvironment(Environment):
             if isinstance(self.track, str) and self.track
             else self._default_track
         )
+        if not track:
+            self._active = False
+            return
         if not isinstance(self.track, str):
             print(
                 "[MusicEnvironment] Invalid track in composition. Using default."

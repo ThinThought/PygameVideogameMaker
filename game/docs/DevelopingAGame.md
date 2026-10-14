@@ -23,12 +23,32 @@ name if you chose a different project name.
 Use `uv run my-game run` to launch the game. The editor writes its scene to
 `game/configs/compositions/editor_export.eei.json`.
 
+## Export a game for Linux
+
+After completing the game, run the export command from the project root:
+
+```bash
+uv run my-game export game
+```
+
+Choose the parent directory for `dist/` when prompted, or press Enter to use
+the current directory. You can pass `--output-dir PATH` to skip the prompt.
+The export contains the game source, saved composition, assets, and launcher;
+it removes the editor and input tester scenes. If the project already has a
+`vendor/` directory, that directory is copied too.
+
+The launcher uses Python from the target system. This is a source-and-assets
+export rather than a native executable: Python 3.12 or newer must be installed,
+and any vendored native packages must match the target Linux CPU architecture.
+For the complete output layout and deployment notes, see
+[`ExportingAGame.md`](ExportingAGame.md).
+
 ## Compose a scene first
 
 The editor palette includes the built-in entities and environments. A useful
-starting set is `VoidEntity`, the platform entities, `BackgroundEnvironment`,
-`ForceEnvironment`, and `MusicEnvironment`. `SpykePlayer` is an included sample
-player that can be used as a reference or replaced with a game's own character.
+starting set is `VoidEntity`, `BackgroundEnvironment`, `ForceEnvironment`, and
+`MusicEnvironment`. Add game-specific entities and environments under their
+documented packages.
 
 In the EEI model, every entity belongs to an environment. Environments may
 contain entities, and entities may contain environments to form nested rules.
@@ -77,8 +97,7 @@ environment rather than changing the shared EEI loader.
 
 The attribute inspector groups component fields by the class that defines them.
 Use the Up and Down arrows to move through the inspector; Enter edits a field.
-For sprite platforms, `render_size` controls the visible sprite dimensions and
-`size` controls the collider dimensions.
+For sprite-based entities, keep asset paths relative to `game/assets/`.
 
 ## Keep game content organized
 

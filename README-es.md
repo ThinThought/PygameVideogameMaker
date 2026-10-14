@@ -69,6 +69,14 @@ entornos genéricos, pero empieza con una composición vacía. Usa
 mecánicas. Sustituye `mi-juego` por el comando creado a partir del nombre que
 hayas elegido.
 
+### Exportar el juego
+
+Al terminar el desarrollo, ejecuta `uv run mi-juego export game`. El comando
+pregunta dónde crear `dist/`; pulsa Enter para usar el directorio actual o
+indica una ruta con `--output-dir`. La exportación elimina las escenas del
+editor y del visor de mandos. La guía detallada y prioritaria está en inglés:
+[`game/docs/ExportingAGame.md`](game/docs/ExportingAGame.md).
+
 ### Cambiar de escena
 
 Usa **F2** o **Tab** para ir a la siguiente escena; **F1** o **Shift+Tab** para
@@ -135,15 +143,17 @@ index = 0
 
 ## Despliegue en consola
 
-Para transferir el juego a una consola compatible, configura `DEPLOY_CONSOLE_IP`
-y ejecuta el script:
+Para transferir el proyecto de trabajo a una consola compatible, configura
+`DEPLOY_CONSOLE_IP` y ejecuta el script:
 
 ```bash
 bash deploy_to_console.sh
 ```
 
-El script empaqueta las dependencias y los recursos necesarios y sincroniza el
-proyecto por SSH.
+El script prepara las dependencias Python y sincroniza el proyecto actual por
+SSH. Para generar primero una carpeta sin las escenas del editor, usa el
+comando de exportación; el script de despliegue no selecciona esa carpeta
+automáticamente.
 
 ## Scripts auxiliares
 
@@ -154,5 +164,5 @@ reducir su tamaño.
 
 ```bash
 # Trim all images in the platforms folder
-uv run python scripts/prune_pngs.py game/assets/images/platforms/grass_platforms
+uv run python scripts/prune_pngs.py game/assets/images/platforms
 ```

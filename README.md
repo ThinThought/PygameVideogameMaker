@@ -29,7 +29,7 @@ uv sync
 The project includes a visual editor that runs by default. To launch it, use:
 
 ```bash
-uv run pygame-editor
+uv run pygame-editor editor
 ```
 
 This will open the editor scene. To run the current game composition directly, use:
@@ -54,6 +54,32 @@ environments, but starts with an empty composition. Run it with
 `uv run my-game run`. See `game/docs/DevelopingAGame.md` for instructions on
 adding game-specific entities, environments, assets, and mechanics. Replace
 `my-game` with the command generated from your chosen project name.
+
+### Export a game
+
+When development is finished, create a game-only Linux export with:
+
+```bash
+uv run pygame-editor export game
+```
+
+The command asks where to create `dist/`; press Enter to use the current
+directory. To choose the directory without a prompt, pass `--output-dir`:
+
+```bash
+uv run pygame-editor export game --output-dir ../release
+```
+
+The export is written to `dist/<project-name>-linux/`. It keeps the game
+runtime source, composition, and assets, and removes the editor and input tester
+scenes. An existing `vendor/` directory is copied as well. The exporter
+currently looks for a launcher named `PygameVideogameMaker.pygame`; if your
+generated project renamed it, rename it to that name before exporting. The
+launcher requires Python 3.12 or newer on the target device; any native
+packages in `vendor/` must match the target Linux architecture. This export
+does not bundle a Python interpreter or cross-compile dependencies. See
+[`game/docs/ExportingAGame.md`](game/docs/ExportingAGame.md) for the full
+workflow and platform notes.
 
 ### Switch scenes
 
@@ -121,13 +147,17 @@ index = 0
 
 ## Console Deployment
 
-If you’re working with a retro console or a similar device, you can use the deployment script to package and transfer your game:
+The deployment script vendors the current Python dependencies and transfers the
+working project over SSH. It is intended for Linux-based console setups with a
+compatible Python runtime already installed:
 
 ```bash
 bash deploy_to_console.sh
 ```
 
-The script handles packaging dependencies and required assets.
+For a game-only folder without editor scenes, use `pygame-editor export game`
+first. The export command prepares a local folder; `deploy_to_console.sh`
+deploys the current project tree and does not automatically deploy that export.
 
 ## Utility Scripts
 
@@ -137,6 +167,6 @@ The project includes a script to trim excess transparent space from your sprites
 
 ```bash
 # Trim all images in the platforms folder
-uv run python scripts/prune_pngs.py game/assets/images/platforms/grass_platforms
+uv run python scripts/prune_pngs.py game/assets/images/platforms
 ```
 
