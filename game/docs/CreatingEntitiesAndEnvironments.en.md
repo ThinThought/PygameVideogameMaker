@@ -24,16 +24,6 @@ Entities:
 Environments:
 - `game/environments/`
 
-## Compatibility modules
-
-The files directly under `game/entities/` (`base.py`, `collider.py`, `mass.py`,
-`playable.py`, `sprite_collider.py`, `visible_mass.py`, and `void.py`) are old
-import paths that re-export classes from their current packages. They remain so
-existing imports and saved compositions keep working. For new code, use
-`core/`, `players/`, or `misc/`; those packages contain the implementations.
-Package `__init__.py` files export their classes, while
-`game/entities/__init__.py` also determines which entities appear in the editor.
-
 ## Create a new Entity
 
 1) Create the class inheriting from `Entity` or a concrete base (e.g. `VisibleMassEntity`).
