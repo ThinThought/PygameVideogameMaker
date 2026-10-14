@@ -5,6 +5,7 @@ from typing import Sequence
 
 import pygame
 
+from game.core.resources import get_asset_path
 from game.environments.base import Environment, AppLike
 
 
